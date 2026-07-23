@@ -1,0 +1,46 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ApplicationTitle>Core AI Architect</ApplicationTitle>
+    <Product>Core AI Architect</Product>
+    <RootNamespace>CoreAiArchitect.App</RootNamespace>
+    <AssemblyName>CoreAiArchitect</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CoreAiArchitect.Core\CoreAiArchitect.Core.csproj" />
+    <ProjectReference Include="..\CoreAiArchitect.PowerShell\CoreAiArchitect.PowerShell.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties>
+    </ProjectReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\schemas\*.json" Link="schemas\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Ship PowerShell module beside the app for Import-Module discovery -->
+    <Content Include="..\CoreAiArchitect.PowerShell\CoreAiArchitect.psd1" Link="PowerShell\CoreAiArchitect.psd1" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <Target Name="CopyPowerShellModule" AfterTargets="Build">
+    <ItemGroup>
+      <_PsModuleFiles Include="$(MSBuildThisFileDirectory)..\CoreAiArchitect.PowerShell\bin\$(Configuration)\net8.0\**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_PsModuleFiles)"
+          DestinationFolder="$(OutputPath)PowerShell\%(RecursiveDir)"
+          SkipUnchangedFiles="true"
+          Condition="Exists('$(MSBuildThisFileDirectory)..\CoreAiArchitect.PowerShell\bin\$(Configuration)\net8.0\CoreAiArchitect.PowerShell.dll')" />
+  </Target>
+
+</Project>

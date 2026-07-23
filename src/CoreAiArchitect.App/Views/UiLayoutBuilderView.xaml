@@ -1,0 +1,115 @@
+<UserControl x:Class="CoreAiArchitect.App.Views.UiLayoutBuilderView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:CoreAiArchitect.App.Controls">
+  <Grid Margin="8">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+    </Grid.RowDefinitions>
+
+    <StackPanel Grid.Row="0" Margin="0,0,0,12">
+      <DockPanel Margin="0,0,0,12" LastChildFill="False">
+        <TextBlock Text="UI Layout Builder" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center"/>
+        <controls:InfoHint DockPanel.Dock="Right" HelpKey="ui.builder" Margin="10,0,0,0"/>
+      </DockPanel>
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <StackPanel Grid.Column="0" Margin="0,0,8,0">
+          <DockPanel Margin="0,0,0,4" LastChildFill="False">
+            <TextBlock Text="Theme" FontWeight="SemiBold" VerticalAlignment="Center"/>
+            <controls:InfoHint DockPanel.Dock="Right" HelpKey="ui.theme"/>
+          </DockPanel>
+          <ComboBox ItemsSource="{Binding Themes}" SelectedItem="{Binding Theme}"/>
+        </StackPanel>
+        <StackPanel Grid.Column="1">
+          <DockPanel Margin="0,0,0,4" LastChildFill="False">
+            <TextBlock Text="Navigation Pattern" FontWeight="SemiBold" VerticalAlignment="Center"/>
+            <controls:InfoHint DockPanel.Dock="Right" HelpKey="ui.navigationPattern"/>
+          </DockPanel>
+          <ComboBox ItemsSource="{Binding NavigationPatterns}" SelectedItem="{Binding NavigationPattern}"/>
+        </StackPanel>
+      </Grid>
+    </StackPanel>
+
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="220"/>
+        <ColumnDefinition Width="220"/>
+        <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
+
+      <DockPanel Grid.Column="0" Margin="0,0,8,0">
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+          <Button Content="Add Screen" Command="{Binding AddScreenCommand}" Margin="0,0,8,0" Padding="8,4"/>
+          <controls:InfoHint HelpKey="ui.builder.addScreen" Margin="0,0,8,0"/>
+          <Button Content="Remove" Command="{Binding RemoveScreenCommand}" Padding="8,4"/>
+        </StackPanel>
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4" LastChildFill="False">
+          <TextBlock Text="Screens" FontWeight="SemiBold" VerticalAlignment="Center"/>
+          <controls:InfoHint DockPanel.Dock="Right" HelpKey="ui.screens"/>
+        </DockPanel>
+        <ListBox ItemsSource="{Binding Screens}" SelectedItem="{Binding SelectedScreen}" DisplayMemberPath="Title"/>
+      </DockPanel>
+
+      <DockPanel Grid.Column="1" Margin="0,0,8,0">
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+          <Button Content="Add Control" Command="{Binding AddControlCommand}" Margin="0,0,8,0" Padding="8,4"/>
+          <controls:InfoHint HelpKey="ui.builder.addControl" Margin="0,0,8,0"/>
+          <Button Content="Remove" Command="{Binding RemoveControlCommand}" Padding="8,4"/>
+        </StackPanel>
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4" LastChildFill="False">
+          <TextBlock Text="Controls" FontWeight="SemiBold" VerticalAlignment="Center"/>
+          <controls:InfoHint DockPanel.Dock="Right" HelpKey="ui.screens.controls"/>
+        </DockPanel>
+        <ListBox ItemsSource="{Binding Controls}" SelectedItem="{Binding SelectedControl}" DisplayMemberPath="Id"/>
+      </DockPanel>
+
+      <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+          <TextBlock Text="Screen" FontWeight="SemiBold" Margin="0,0,0,6"/>
+          <DockPanel Margin="0,0,0,2" LastChildFill="False">
+            <TextBlock Text="Id" VerticalAlignment="Center"/>
+            <controls:InfoHint DockPanel.Dock="Right" HelpKey="ui.screens.id"/>
+          </DockPanel>
+          <TextBox Text="{Binding SelectedScreenId, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,6"/>
+          <DockPanel Margin="0,0,0,2" LastChildFill="False">
+            <TextBlock Text="Title" VerticalAlignment="Center"/>
+            <controls:InfoHint DockPanel.Dock="Right" HelpKey="ui.screens.title"/>
+          </DockPanel>
+          <TextBox Text="{Binding SelectedScreenTitle, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,6"/>
+          <DockPanel Margin="0,0,0,2" LastChildFill="False">
+            <TextBlock Text="Route" VerticalAlignment="Center"/>
+            <controls:InfoHint DockPanel.Dock="Right" HelpKey="ui.screens.route"/>
+          </DockPanel>
+          <TextBox Text="{Binding SelectedScreenRoute, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>
+
+          <TextBlock Text="Control" FontWeight="SemiBold" Margin="0,0,0,6"/>
+          <DockPanel Margin="0,0,0,2" LastChildFill="False">
+            <TextBlock Text="Id" VerticalAlignment="Center"/>
+            <controls:InfoHint DockPanel.Dock="Right" HelpKey="ui.screens.controls.id"/>
+          </DockPanel>
+          <TextBox Text="{Binding SelectedControlId, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,6"/>
+          <DockPanel Margin="0,0,0,2" LastChildFill="False">
+            <TextBlock Text="Type" VerticalAlignment="Center"/>
+            <controls:InfoHint DockPanel.Dock="Right" HelpKey="ui.screens.controls.type"/>
+          </DockPanel>
+          <ComboBox ItemsSource="{Binding ControlTypes}" SelectedItem="{Binding SelectedControlType}" Margin="0,0,0,6"/>
+          <DockPanel Margin="0,0,0,2" LastChildFill="False">
+            <TextBlock Text="Label" VerticalAlignment="Center"/>
+            <controls:InfoHint DockPanel.Dock="Right" HelpKey="ui.screens.controls.label"/>
+          </DockPanel>
+          <TextBox Text="{Binding SelectedControlLabel, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,6"/>
+          <DockPanel Margin="0,0,0,2" LastChildFill="False">
+            <TextBlock Text="Action" VerticalAlignment="Center"/>
+            <controls:InfoHint DockPanel.Dock="Right" HelpKey="ui.screens.controls.action"/>
+          </DockPanel>
+          <TextBox Text="{Binding SelectedControlAction, UpdateSourceTrigger=PropertyChanged}"/>
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
+  </Grid>
+</UserControl>

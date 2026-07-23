@@ -1,0 +1,90 @@
+<UserControl x:Class="CoreAiArchitect.App.Views.WorkflowBuilderView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:CoreAiArchitect.App.Controls">
+  <Grid Margin="8">
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="240"/>
+      <ColumnDefinition Width="*"/>
+    </Grid.ColumnDefinitions>
+
+    <DockPanel Grid.Column="0" Margin="0,0,12,0">
+      <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+        <Button Content="Add" Command="{Binding AddWorkflowCommand}" Margin="0,0,8,0" Padding="10,4"/>
+        <controls:InfoHint HelpKey="workflow.builder.add" Margin="0,0,8,0"/>
+        <Button Content="Remove" Command="{Binding RemoveWorkflowCommand}" Padding="10,4"/>
+      </StackPanel>
+      <ListBox ItemsSource="{Binding Workflows}" SelectedItem="{Binding SelectedWorkflow}" DisplayMemberPath="Name"/>
+    </DockPanel>
+
+    <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+      <StackPanel>
+        <DockPanel Margin="0,0,0,16" LastChildFill="False">
+          <TextBlock Text="Workflow Builder" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center"/>
+          <controls:InfoHint DockPanel.Dock="Right" HelpKey="workflow.builder" Margin="10,0,0,0"/>
+        </DockPanel>
+
+        <DockPanel Margin="0,0,0,4" LastChildFill="False">
+          <TextBlock Text="Id" FontWeight="SemiBold" VerticalAlignment="Center"/>
+          <controls:InfoHint DockPanel.Dock="Right" HelpKey="workflows.id"/>
+        </DockPanel>
+        <TextBox Text="{Binding SelectedWorkflowId, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+
+        <DockPanel Margin="0,0,0,4" LastChildFill="False">
+          <TextBlock Text="Name" FontWeight="SemiBold" VerticalAlignment="Center"/>
+          <controls:InfoHint DockPanel.Dock="Right" HelpKey="workflows.name"/>
+        </DockPanel>
+        <TextBox Text="{Binding SelectedWorkflowName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+
+        <DockPanel Margin="0,0,0,4" LastChildFill="False">
+          <TextBlock Text="Trigger" FontWeight="SemiBold" VerticalAlignment="Center"/>
+          <controls:InfoHint DockPanel.Dock="Right" HelpKey="workflows.trigger"/>
+        </DockPanel>
+        <DockPanel Margin="0,0,0,8">
+          <ComboBox DockPanel.Dock="Right" Width="180" ItemsSource="{Binding AvailableTriggers}"
+                    SelectionChanged="TriggerPicker_OnSelectionChanged" Margin="8,0,0,0"
+                    ToolTip="Pick a UI control Id to use as this workflow's trigger."/>
+          <TextBox Text="{Binding SelectedWorkflowTrigger, UpdateSourceTrigger=PropertyChanged}"/>
+        </DockPanel>
+
+        <DockPanel Margin="0,0,0,4" LastChildFill="False">
+          <TextBlock Text="Error Strategy" FontWeight="SemiBold" VerticalAlignment="Center"/>
+          <controls:InfoHint DockPanel.Dock="Right" HelpKey="workflows.errorHandling.strategy"/>
+        </DockPanel>
+        <ComboBox ItemsSource="{Binding ErrorStrategies}"
+                  SelectedItem="{Binding SelectedErrorStrategy}" Margin="0,0,0,8"/>
+
+        <DockPanel Margin="0,0,0,4" LastChildFill="False">
+          <TextBlock Text="Log Level" FontWeight="SemiBold" VerticalAlignment="Center"/>
+          <controls:InfoHint DockPanel.Dock="Right" HelpKey="workflows.errorHandling.logLevel"/>
+        </DockPanel>
+        <ComboBox ItemsSource="{Binding LogLevels}"
+                  SelectedItem="{Binding SelectedLogLevel}" Margin="0,0,0,12"/>
+
+        <DockPanel Margin="0,0,0,4" LastChildFill="False">
+          <TextBlock Text="Steps" FontWeight="SemiBold" VerticalAlignment="Center"/>
+          <controls:InfoHint DockPanel.Dock="Right" HelpKey="workflows.steps"/>
+        </DockPanel>
+        <DockPanel Margin="0,0,0,8">
+          <Button DockPanel.Dock="Right" Content="Add Step" Command="{Binding AddStepCommand}" Margin="8,0,0,0" Padding="10,4"/>
+          <controls:InfoHint DockPanel.Dock="Right" HelpKey="workflow.builder.addStep" Margin="0,0,0,0"/>
+          <TextBox Text="{Binding DraftStep, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,8,0"/>
+        </DockPanel>
+        <ItemsControl ItemsSource="{Binding Steps}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <DockPanel Margin="0,0,0,4">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                  <Button Content="Up" Command="{Binding DataContext.MoveStepUpCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Margin="0,0,4,0" Padding="8,2"/>
+                  <Button Content="Down" Command="{Binding DataContext.MoveStepDownCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Margin="0,0,4,0" Padding="8,2"/>
+                  <Button Content="Remove" Command="{Binding DataContext.RemoveStepCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Padding="8,2"/>
+                </StackPanel>
+                <TextBlock Text="{Binding}" VerticalAlignment="Center"/>
+              </DockPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

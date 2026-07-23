@@ -1,0 +1,67 @@
+using CoreAiArchitect.Core.Models.Ssot;
+
+namespace CoreAiArchitect.Core.Documents;
+
+public static class SsotDocumentNormalizer
+{
+    /// <summary>
+    /// Ensures collections and nested objects are non-null after load/deserialize
+    /// so UI bindings and PathBinder never hit null reference crashes.
+    /// </summary>
+    public static SsotDocument Normalize(SsotDocument document)
+    {
+        document.Project ??= new ProjectInfo();
+        document.Project.Tags ??= new List<string>();
+
+        document.Environment ??= new EnvironmentInfo();
+        document.Architecture ??= new ArchitectureInfo();
+        document.Architecture.Layers ??= new List<string>();
+        document.Architecture.Modules ??= new List<ModuleInfo>();
+        foreach (var module in document.Architecture.Modules)
+        {
+            module.Dependencies ??= new List<string>();
+        }
+
+        document.Ui ??= new UiInfo();
+        document.Ui.Screens ??= new List<ScreenInfo>();
+        foreach (var screen in document.Ui.Screens)
+        {
+            screen.Controls ??= new List<ControlInfo>();
+        }
+
+        document.Domain ??= new DomainInfo();
+        document.Domain.Entities ??= new List<EntityInfo>();
+        foreach (var entity in document.Domain.Entities)
+        {
+            entity.Fields ??= new List<EntityFieldInfo>();
+        }
+
+        document.Workflows ??= new List<WorkflowInfo>();
+        foreach (var workflow in document.Workflows)
+        {
+            workflow.Steps ??= new List<string>();
+            workflow.ErrorHandling ??= new ErrorHandlingInfo();
+        }
+
+        document.Constraints ??= new ConstraintsInfo();
+        document.Constraints.AllowedLibraries ??= new List<string>();
+        document.Constraints.ForbiddenLibraries ??= new List<string>();
+
+        document.Data ??= new DataInfo();
+        document.Data.Storage ??= new StorageInfo();
+
+        document.Build ??= new BuildInfo();
+        document.Build.Configuration ??= new List<string>();
+        document.Build.Targets ??= new List<BuildTargetInfo>();
+
+        document.Deployment ??= new DeploymentInfo();
+        document.Testing ??= new TestingInfo();
+        document.Documentation ??= new DocumentationInfo();
+        document.Documentation.Sections ??= new List<string>();
+
+        if (string.IsNullOrWhiteSpace(document.SsotVersion))
+            document.SsotVersion = "1.0.0";
+
+        return document;
+    }
+}
