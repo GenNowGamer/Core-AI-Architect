@@ -1,0 +1,348 @@
+﻿<Window x:Class="CoreAiArchitect.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:conv="clr-namespace:CoreAiArchitect.App.Converters"
+        xmlns:controls="clr-namespace:CoreAiArchitect.App.Controls"
+        Title="{Binding WindowTitle}"
+        Height="760" Width="1180"
+        MinHeight="600" MinWidth="960"
+        WindowStartupLocation="CenterScreen">
+  <Window.Resources>
+    <conv:WizardStepVisibilityConverter x:Key="StepVis"/>
+    <conv:BoolToVisibilityConverter x:Key="BoolVis"/>
+  </Window.Resources>
+
+  <DockPanel>
+    <Menu DockPanel.Dock="Top" Background="{StaticResource TealBrush}" Foreground="White">
+      <MenuItem Header="_File" Foreground="White">
+        <MenuItem Header="_New guided blueprint" Command="{Binding NewDocumentCommand}"/>
+        <MenuItem Header="_Open..." Command="{Binding OpenDocumentCommand}"/>
+        <MenuItem Header="_Save" Command="{Binding SaveDocumentCommand}"/>
+        <MenuItem Header="Save _As..." Command="{Binding SaveDocumentAsCommand}"/>
+        <Separator/>
+        <MenuItem Header="Export _JSON..." Command="{Binding ExportJsonCommand}"/>
+        <MenuItem Header="Export _Markdown..." Command="{Binding ExportMarkdownCommand}"/>
+        <Separator/>
+        <MenuItem Header="E_xit" Click="Exit_Click"/>
+      </MenuItem>
+      <MenuItem Header="_Help" Foreground="White">
+        <MenuItem Header="_How this works" Command="{Binding ShowHelpCommand}"/>
+      </MenuItem>
+    </Menu>
+
+    <Border DockPanel.Dock="Top" Background="{StaticResource HeaderGradient}" Padding="24,18">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        <StackPanel>
+          <TextBlock Text="Core AI Architect" FontFamily="{StaticResource DisplayFont}"
+                     FontSize="28" FontWeight="SemiBold" Foreground="White"/>
+          <TextBlock Text="Build an app blueprint in plain language — no coding experience required."
+                     Foreground="#F7EDE8" Margin="0,4,0,0" TextWrapping="Wrap"/>
+        </StackPanel>
+        <StackPanel Grid.Column="1" VerticalAlignment="Center" MinWidth="220">
+          <TextBlock Text="{Binding ProgressText}" Foreground="White" HorizontalAlignment="Right" Margin="0,0,0,6"/>
+          <ProgressBar Height="8" Minimum="0" Maximum="1" Value="{Binding ProgressValue}"
+                       Foreground="{StaticResource CoralBrush}" Background="#66FFFFFF"/>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <StatusBar DockPanel.Dock="Bottom" Background="{StaticResource SandDeepBrush}">
+      <StatusBarItem>
+        <TextBlock Text="{Binding StatusText}"/>
+      </StatusBarItem>
+    </StatusBar>
+
+    <Grid Margin="20">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="Auto"/>
+      </Grid.RowDefinitions>
+
+      <StackPanel Grid.Row="0" Margin="0,0,0,16">
+        <TextBlock Text="{Binding StepTitle}" FontFamily="{StaticResource DisplayFont}"
+                   FontSize="26" FontWeight="SemiBold" Foreground="{StaticResource TealBrush}"/>
+        <TextBlock Text="{Binding StepSubtitle}" Margin="0,6,0,0" TextWrapping="Wrap" Foreground="#445"/>
+      </StackPanel>
+
+      <Border Grid.Row="1" Style="{StaticResource WizardCard}" Margin="0" Padding="20">
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled"
+                      CanContentScroll="False">
+          <Grid>
+            <!-- App kind -->
+            <ItemsControl ItemsSource="{Binding AppKinds}"
+                          Visibility="{Binding CurrentStep, Converter={StaticResource StepVis}, ConverterParameter=AppKind}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <WrapPanel/>
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border Width="240" MinHeight="120" Margin="0,0,12,12" Padding="14" CornerRadius="10"
+                          BorderThickness="2" Cursor="Hand"
+                          MouseLeftButtonUp="AppKindCard_OnClick"
+                          Tag="{Binding}">
+                    <Border.Style>
+                      <Style TargetType="Border">
+                        <Setter Property="Background" Value="White"/>
+                        <Setter Property="BorderBrush" Value="#D9CFC0"/>
+                        <Style.Triggers>
+                          <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                            <Setter Property="BorderBrush" Value="{StaticResource CoralBrush}"/>
+                            <Setter Property="Background" Value="#FFF6F3"/>
+                          </DataTrigger>
+                        </Style.Triggers>
+                      </Style>
+                    </Border.Style>
+                    <StackPanel>
+                      <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="16" Foreground="{StaticResource TealBrush}"/>
+                      <TextBlock Text="{Binding Description}" TextWrapping="Wrap" Margin="0,8,0,0" Foreground="#555"/>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- Name -->
+            <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource StepVis}, ConverterParameter=NameAndPurpose}">
+              <TextBlock Style="{StaticResource FieldLabel}" Text="App name"/>
+              <TextBox Text="{Binding Answers.ProjectName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,14"/>
+              <TextBlock Style="{StaticResource FieldLabel}" Text="What should it do? (short description)"/>
+              <TextBox Text="{Binding Answers.Description, UpdateSourceTrigger=PropertyChanged}"
+                       AcceptsReturn="True" TextWrapping="Wrap" MinHeight="100" Margin="0,0,0,14"/>
+              <TextBlock Style="{StaticResource FieldLabel}" Text="Owner (optional)"/>
+              <TextBox Text="{Binding Answers.Owner, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+              <TextBlock Foreground="#666" Text="{Binding Answers.DerivedProjectId, StringFormat=File-friendly id: {0}}"/>
+            </StackPanel>
+
+            <!-- Platform -->
+            <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource StepVis}, ConverterParameter=Platform}">
+              <TextBlock Style="{StaticResource FieldLabel}" Text="Computer / OS"/>
+              <ComboBox ItemsSource="{Binding AvailableOsOptions}" SelectedItem="{Binding Answers.TargetOs}" Margin="0,0,0,14"/>
+              <TextBlock Style="{StaticResource FieldLabel}" Text="Language"/>
+              <ComboBox ItemsSource="{Binding AvailableLanguages}" SelectedItem="{Binding Answers.Language}" Margin="0,0,0,14"
+                        SelectionChanged="PlatformChoice_OnChanged"/>
+              <TextBlock TextWrapping="Wrap" Foreground="#666"
+                         Text="Runtime and UI framework stay matched to your app kind so choices stay compatible."/>
+              <TextBlock Margin="0,12,0,0" Text="{Binding Answers.UiFramework, StringFormat=UI surface: {0}}"/>
+              <TextBlock Text="{Binding Answers.Runtime, StringFormat=Runtime: {0}}"/>
+            </StackPanel>
+
+            <!-- Look -->
+            <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource StepVis}, ConverterParameter=LookAndFeel}">
+              <TextBlock Style="{StaticResource FieldLabel}" Text="Visual style"/>
+              <ComboBox ItemsSource="{Binding AvailableThemes}" SelectedItem="{Binding Answers.Theme}" Margin="0,0,0,14"
+                        SelectionChanged="LookChoice_OnChanged"/>
+              <TextBlock Style="{StaticResource FieldLabel}" Text="How people move around"/>
+              <ComboBox ItemsSource="{Binding AvailableNavigationPatterns}" SelectedItem="{Binding Answers.NavigationPattern}" Margin="0,0,0,8"
+                        SelectionChanged="LookChoice_OnChanged"/>
+              <TextBlock TextWrapping="Wrap" Foreground="#666"
+                         Text="Only options that work with your app kind are shown. Incompatible picks are blocked."/>
+            </StackPanel>
+
+            <!-- Memory -->
+            <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource StepVis}, ConverterParameter=Memory}">
+              <RadioButton Content="Nothing to remember (no saved files or database)"
+                           IsChecked="{Binding MemoryNone}" Margin="0,0,0,10" GroupName="Memory"/>
+              <RadioButton Content="Simple files on this computer"
+                           IsChecked="{Binding MemoryFiles}" Margin="0,0,0,10" GroupName="Memory"/>
+              <RadioButton Content="A small database (for searchable history)"
+                           IsChecked="{Binding MemoryDatabase}" Margin="0,0,0,10" GroupName="Memory"/>
+              <TextBlock TextWrapping="Wrap" Foreground="#666"
+                         Text="We’ll set storage and migration settings automatically from this choice."/>
+            </StackPanel>
+
+            <!-- Capabilities -->
+            <ItemsControl ItemsSource="{Binding Capabilities}"
+                          Visibility="{Binding CurrentStep, Converter={StaticResource StepVis}, ConverterParameter=Capabilities}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border Margin="0,0,0,10" Padding="12" Background="White" BorderBrush="#E2D8C8" BorderThickness="1" CornerRadius="8">
+                    <CheckBox IsChecked="{Binding IsSelected}">
+                      <StackPanel>
+                        <TextBlock Text="{Binding Label}" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding Description}" Foreground="#666" TextWrapping="Wrap"/>
+                      </StackPanel>
+                    </CheckBox>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- Review screens -->
+            <Grid MinHeight="420"
+                  Visibility="{Binding CurrentStep, Converter={StaticResource StepVis}, ConverterParameter=ReviewScreens}">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="260"/>
+                <ColumnDefinition Width="*" MinWidth="340"/>
+              </Grid.ColumnDefinitions>
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*" MinHeight="120"/>
+                <RowDefinition Height="Auto"/>
+              </Grid.RowDefinitions>
+
+              <!-- Screens toolbar -->
+              <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                <TextBlock Text="Screens" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                  <Button Content="Add Screen" Command="{Binding AddScreenCommand}" Style="{StaticResource SecondaryButton}"
+                          Padding="10,6" Margin="0,0,8,0"/>
+                  <Button Content="Remove" Command="{Binding RemoveScreenCommand}" Style="{StaticResource GhostButton}" Padding="10,6"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                  <Button Content="Move Up" Command="{Binding MoveScreenUpCommand}" Style="{StaticResource GhostButton}"
+                          Padding="10,6" Margin="0,0,8,0" ToolTip="Move selected screen up"/>
+                  <Button Content="Move Down" Command="{Binding MoveScreenDownCommand}" Style="{StaticResource GhostButton}"
+                          Padding="10,6" ToolTip="Move selected screen down"/>
+                </StackPanel>
+              </StackPanel>
+
+              <!-- Screen title + controls toolbar (aligned with Screens header) -->
+              <StackPanel Grid.Column="1">
+                <TextBlock Style="{StaticResource FieldLabel}" Text="Screen title"/>
+                <TextBox Text="{Binding SelectedScreen.Title, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
+                <TextBlock Text="Buttons / controls" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                  <Button Content="Add Button" Command="{Binding AddButtonCommand}" Style="{StaticResource SecondaryButton}"
+                          Padding="10,6" Margin="0,0,8,0"/>
+                  <Button Content="Add Control" Command="{Binding AddControlCommand}" Style="{StaticResource SecondaryButton}"
+                          Padding="10,6" Margin="0,0,8,0"/>
+                  <Button Content="Remove" Command="{Binding RemoveControlCommand}" Style="{StaticResource GhostButton}" Padding="10,6"/>
+                </StackPanel>
+                <TextBlock TextWrapping="Wrap" Foreground="#666" FontSize="12"
+                           Text="Button = action. Control = picker/textbox/list. Type shows in parentheses."/>
+              </StackPanel>
+
+              <!-- Screen list -->
+              <ListBox Grid.Row="1" Grid.Column="0" Margin="0,0,16,12"
+                       ItemsSource="{Binding ReviewScreens}" SelectedItem="{Binding SelectedScreen}"
+                       DisplayMemberPath="Title" MinHeight="120"/>
+
+              <!-- Controls list -->
+              <ListBox Grid.Row="1" Grid.Column="1" Margin="0,8,0,12"
+                       ItemsSource="{Binding ReviewControls}" SelectedItem="{Binding SelectedControl}"
+                       MinHeight="120">
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <TextBlock>
+                      <Run Text="{Binding Label, Mode=OneWay}"/>
+                      <Run Text="  (" Foreground="#888"/>
+                      <Run Text="{Binding Type, Mode=OneWay}" Foreground="#888"/>
+                      <Run Text=")" Foreground="#888"/>
+                    </TextBlock>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+
+              <!-- Selected control fields — always below lists, two columns to save height -->
+              <Grid Grid.Row="2" Grid.Column="1">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="12"/>
+                  <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource FieldLabel}" Text="Selected control label"/>
+                <TextBox Grid.Row="1" Grid.Column="0" Text="{Binding SelectedControl.Label, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+                <TextBlock Grid.Row="0" Grid.Column="2" Style="{StaticResource FieldLabel}" Text="Control type"/>
+                <ComboBox Grid.Row="1" Grid.Column="2" ItemsSource="{Binding AvailableControlTypes}"
+                          SelectedItem="{Binding SelectedControl.Type}" Margin="0,0,0,8"/>
+                <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Style="{StaticResource FieldLabel}"
+                           Text="Control id (used to start flows)"/>
+                <TextBox Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3"
+                         Text="{Binding SelectedControl.Id, UpdateSourceTrigger=PropertyChanged}"/>
+              </Grid>
+            </Grid>
+
+            <!-- Review data -->
+            <Grid Visibility="{Binding CurrentStep, Converter={StaticResource StepVis}, ConverterParameter=ReviewData}">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="220"/>
+                <ColumnDefinition Width="*"/>
+              </Grid.ColumnDefinitions>
+              <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Text="Data objects" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                <ListBox ItemsSource="{Binding Document.Domain.Entities}" SelectedItem="{Binding SelectedEntity}" DisplayMemberPath="Name"/>
+              </DockPanel>
+              <StackPanel Grid.Column="1" Margin="16,0,0,0">
+                <TextBlock Style="{StaticResource FieldLabel}" Text="Object name"/>
+                <TextBox Text="{Binding SelectedEntity.Name, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
+                <TextBlock Style="{StaticResource FieldLabel}" Text="Pieces of information (fields)"/>
+                <ListBox ItemsSource="{Binding SelectedEntity.Fields}" SelectedItem="{Binding SelectedField}" DisplayMemberPath="Name" Height="140" Margin="0,0,0,10"/>
+                <TextBlock Style="{StaticResource FieldLabel}" Text="Field name"/>
+                <TextBox Text="{Binding SelectedField.Name, UpdateSourceTrigger=PropertyChanged}"/>
+              </StackPanel>
+            </Grid>
+
+            <!-- Review workflows -->
+            <Grid Visibility="{Binding CurrentStep, Converter={StaticResource StepVis}, ConverterParameter=ReviewWorkflows}">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="220"/>
+                <ColumnDefinition Width="*"/>
+              </Grid.ColumnDefinitions>
+              <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Text="Click-flows" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                <ListBox ItemsSource="{Binding Document.Workflows}" SelectedItem="{Binding SelectedWorkflow}" DisplayMemberPath="Name"/>
+              </DockPanel>
+              <StackPanel Grid.Column="1" Margin="16,0,0,0">
+                <TextBlock Style="{StaticResource FieldLabel}" Text="Flow name"/>
+                <TextBox Text="{Binding SelectedWorkflow.Name, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
+                <TextBlock Style="{StaticResource FieldLabel}" Text="Starts when this button is used"/>
+                <ComboBox ItemsSource="{Binding TriggerOptions}" SelectedItem="{Binding SelectedWorkflow.Trigger}" Margin="0,0,0,10"/>
+                <TextBlock Style="{StaticResource FieldLabel}" Text="Steps (one per line in order)"/>
+                <ItemsControl ItemsSource="{Binding SelectedWorkflow.Steps}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding}" Margin="0,0,0,4"/>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </Grid>
+
+            <!-- Ready -->
+            <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource StepVis}, ConverterParameter=Ready}">
+              <TextBlock Text="{Binding ReadySummary}" TextWrapping="Wrap" Margin="0,0,0,12" FontSize="14"/>
+              <ItemsControl ItemsSource="{Binding ReadyMessages}" Margin="0,0,0,16">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,0,0,6" Foreground="{StaticResource CoralBrush}"/>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <StackPanel Orientation="Horizontal">
+                <Button Content="Check again" Command="{Binding RunReadyCheckCommand}" Style="{StaticResource GhostButton}" Margin="0,0,10,0"/>
+                <Button Content="Save blueprint" Command="{Binding SaveDocumentCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,10,0"
+                        IsEnabled="{Binding IsReadyToExport}"/>
+                <Button Content="Export for AI agent" Command="{Binding ExportJsonCommand}" Style="{StaticResource PrimaryButton}"
+                        IsEnabled="{Binding IsReadyToExport}"/>
+              </StackPanel>
+            </StackPanel>
+          </Grid>
+        </ScrollViewer>
+      </Border>
+
+      <DockPanel Grid.Row="2" Margin="0,16,0,0">
+        <Button DockPanel.Dock="Left" Content="Back" Command="{Binding BackCommand}" Style="{StaticResource GhostButton}"
+                IsEnabled="{Binding CanGoBack}"/>
+        <Button DockPanel.Dock="Right" Content="Next" Command="{Binding NextCommand}" Style="{StaticResource PrimaryButton}"
+                Visibility="{Binding CanGoNext, Converter={StaticResource BoolVis}}"/>
+        <controls:InfoHint DockPanel.Dock="Right" HelpKey="documentation.finalize" Margin="0,0,12,0"
+                           Visibility="{Binding IsReadyStep, Converter={StaticResource BoolVis}}"/>
+        <TextBlock VerticalAlignment="Center" Foreground="#666" Text="Answer honestly — incompatible choices are blocked automatically."/>
+      </DockPanel>
+    </Grid>
+  </DockPanel>
+</Window>

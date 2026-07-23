@@ -1,0 +1,142 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:fields="clr-namespace:CoreAiArchitect.App.ViewModels.Fields"
+                    xmlns:conv="clr-namespace:CoreAiArchitect.App.Converters"
+                    xmlns:vm="clr-namespace:CoreAiArchitect.App.ViewModels"
+                    xmlns:views="clr-namespace:CoreAiArchitect.App.Views"
+                    xmlns:controls="clr-namespace:CoreAiArchitect.App.Controls">
+
+  <DataTemplate x:Key="StringFieldTemplate" DataType="{x:Type fields:StringFieldViewModel}">
+    <StackPanel Margin="0,0,0,12">
+      <DockPanel Margin="0,0,0,4" LastChildFill="False">
+        <TextBlock Text="{Binding Label}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+        <controls:InfoHint DockPanel.Dock="Right" HelpKey="{Binding HelpKey}"/>
+      </DockPanel>
+      <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"/>
+    </StackPanel>
+  </DataTemplate>
+
+  <DataTemplate x:Key="TextFieldTemplate" DataType="{x:Type fields:TextFieldViewModel}">
+    <StackPanel Margin="0,0,0,12">
+      <DockPanel Margin="0,0,0,4" LastChildFill="False">
+        <TextBlock Text="{Binding Label}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+        <controls:InfoHint DockPanel.Dock="Right" HelpKey="{Binding HelpKey}"/>
+      </DockPanel>
+      <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+               AcceptsReturn="True" TextWrapping="Wrap" MinHeight="72"
+               VerticalScrollBarVisibility="Auto"/>
+    </StackPanel>
+  </DataTemplate>
+
+  <DataTemplate x:Key="EnumFieldTemplate" DataType="{x:Type fields:EnumFieldViewModel}">
+    <StackPanel Margin="0,0,0,12">
+      <DockPanel Margin="0,0,0,4" LastChildFill="False">
+        <TextBlock Text="{Binding Label}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+        <controls:InfoHint DockPanel.Dock="Right" HelpKey="{Binding HelpKey}"/>
+      </DockPanel>
+      <ComboBox ItemsSource="{Binding Values}" SelectedItem="{Binding SelectedValue}"/>
+    </StackPanel>
+  </DataTemplate>
+
+  <DataTemplate x:Key="BooleanFieldTemplate" DataType="{x:Type fields:BooleanFieldViewModel}">
+    <DockPanel Margin="0,0,0,12" LastChildFill="False">
+      <CheckBox Content="{Binding Label}" IsChecked="{Binding Value}" VerticalAlignment="Center"/>
+      <controls:InfoHint DockPanel.Dock="Right" HelpKey="{Binding HelpKey}"/>
+    </DockPanel>
+  </DataTemplate>
+
+  <DataTemplate x:Key="NumberFieldTemplate" DataType="{x:Type fields:NumberFieldViewModel}">
+    <StackPanel Margin="0,0,0,12">
+      <DockPanel Margin="0,0,0,4" LastChildFill="False">
+        <TextBlock Text="{Binding Label}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+        <controls:InfoHint DockPanel.Dock="Right" HelpKey="{Binding HelpKey}"/>
+      </DockPanel>
+      <TextBox Text="{Binding ValueText, UpdateSourceTrigger=PropertyChanged}"/>
+    </StackPanel>
+  </DataTemplate>
+
+  <DataTemplate x:Key="StringListFieldTemplate" DataType="{x:Type fields:StringListFieldViewModel}">
+    <StackPanel Margin="0,0,0,12">
+      <DockPanel Margin="0,0,0,4" LastChildFill="False">
+        <TextBlock Text="{Binding Label}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+        <controls:InfoHint DockPanel.Dock="Right" HelpKey="{Binding HelpKey}"/>
+      </DockPanel>
+      <DockPanel Margin="0,0,0,6">
+        <Button DockPanel.Dock="Right" Content="Add" Command="{Binding AddItemCommand}" Margin="8,0,0,0" Padding="12,4"/>
+        <TextBox Text="{Binding DraftItem, UpdateSourceTrigger=PropertyChanged}"/>
+      </DockPanel>
+      <ItemsControl ItemsSource="{Binding Items}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <DockPanel Margin="0,0,0,4">
+              <Button DockPanel.Dock="Right" Content="Remove" Command="{Binding DataContext.RemoveItemCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" Padding="8,2"/>
+              <TextBlock Text="{Binding}" VerticalAlignment="Center"/>
+            </DockPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+  </DataTemplate>
+
+  <DataTemplate x:Key="ObjectListFieldTemplate" DataType="{x:Type fields:ObjectListFieldViewModel}">
+    <StackPanel Margin="0,0,0,12">
+      <DockPanel Margin="0,0,0,6">
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+          <TextBlock Text="{Binding Label}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+          <controls:InfoHint HelpKey="{Binding HelpKey}"/>
+        </StackPanel>
+        <Button DockPanel.Dock="Right" Content="Add Item" Command="{Binding AddItemCommand}" Padding="12,4"/>
+      </DockPanel>
+      <ItemsControl ItemsSource="{Binding Items}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <Border BorderBrush="#CCCCCC" BorderThickness="1" Padding="8" Margin="0,0,0,8">
+              <DockPanel>
+                <Button DockPanel.Dock="Right" Content="Remove" VerticalAlignment="Top"
+                        Command="{Binding DataContext.RemoveItemCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                        CommandParameter="{Binding}" Margin="8,0,0,0" Padding="8,2"/>
+                <ItemsControl ItemsSource="{Binding Fields}">
+                  <ItemsControl.ItemTemplateSelector>
+                    <conv:FieldTemplateSelector
+                      StringTemplate="{StaticResource StringFieldTemplate}"
+                      TextTemplate="{StaticResource TextFieldTemplate}"
+                      EnumTemplate="{StaticResource EnumFieldTemplate}"
+                      BooleanTemplate="{StaticResource BooleanFieldTemplate}"
+                      NumberTemplate="{StaticResource NumberFieldTemplate}"
+                      StringListTemplate="{StaticResource StringListFieldTemplate}"/>
+                  </ItemsControl.ItemTemplateSelector>
+                </ItemsControl>
+              </DockPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+  </DataTemplate>
+
+  <conv:FieldTemplateSelector x:Key="FieldTemplateSelector"
+                              StringTemplate="{StaticResource StringFieldTemplate}"
+                              TextTemplate="{StaticResource TextFieldTemplate}"
+                              EnumTemplate="{StaticResource EnumFieldTemplate}"
+                              BooleanTemplate="{StaticResource BooleanFieldTemplate}"
+                              NumberTemplate="{StaticResource NumberFieldTemplate}"
+                              StringListTemplate="{StaticResource StringListFieldTemplate}"
+                              ObjectListTemplate="{StaticResource ObjectListFieldTemplate}"/>
+
+  <DataTemplate x:Key="SectionEditorTemplate" DataType="{x:Type vm:SectionViewModel}">
+    <views:SectionEditor/>
+  </DataTemplate>
+
+  <DataTemplate x:Key="WorkflowBuilderTemplate" DataType="{x:Type vm:WorkflowBuilderViewModel}">
+    <views:WorkflowBuilderView/>
+  </DataTemplate>
+
+  <DataTemplate x:Key="UiLayoutBuilderTemplate" DataType="{x:Type vm:UiLayoutBuilderViewModel}">
+    <views:UiLayoutBuilderView/>
+  </DataTemplate>
+
+  <conv:EditorTemplateSelector x:Key="EditorTemplateSelector"
+                               SectionTemplate="{StaticResource SectionEditorTemplate}"
+                               WorkflowTemplate="{StaticResource WorkflowBuilderTemplate}"
+                               UiTemplate="{StaticResource UiLayoutBuilderTemplate}"/>
+</ResourceDictionary>

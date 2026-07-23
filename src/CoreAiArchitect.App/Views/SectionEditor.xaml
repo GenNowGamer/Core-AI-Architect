@@ -1,0 +1,35 @@
+<UserControl x:Class="CoreAiArchitect.App.Views.SectionEditor"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:CoreAiArchitect.App.Controls">
+  <UserControl.Resources>
+    <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+  </UserControl.Resources>
+  <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="8">
+    <StackPanel>
+      <DockPanel Margin="0,0,0,16">
+        <controls:InfoHint DockPanel.Dock="Right" HelpKey="{Binding HelpKey}" Margin="10,0,0,0"/>
+        <TextBlock Text="{Binding Label}" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center"/>
+      </DockPanel>
+      <ItemsControl ItemsSource="{Binding Fields}"
+                    ItemTemplateSelector="{DynamicResource FieldTemplateSelector}"/>
+
+      <Border Visibility="{Binding ShowFinalizeButton, Converter={StaticResource BoolToVis}}"
+              Margin="0,24,0,8" Padding="12" Background="#F7F7F7" BorderBrush="#DDDDDD" BorderThickness="1">
+        <StackPanel>
+          <DockPanel Margin="0,0,0,6" LastChildFill="False">
+            <TextBlock Text="Finalize for AI agent" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center"/>
+            <controls:InfoHint DockPanel.Dock="Right" HelpKey="documentation.finalize"/>
+          </DockPanel>
+          <TextBlock TextWrapping="Wrap" Margin="0,0,0,12" Foreground="#444444"
+                     Text="Runs schema validation plus an end-to-end readiness check (UI surfaces, domain, workflows, build targets, and related consistency). Use this when the SSOT is ready to hand to a coding agent."/>
+          <Button Content="Finalize SSOT"
+                  Command="{Binding FinalizeSsotCommand}"
+                  HorizontalAlignment="Left"
+                  Padding="16,8"
+                  FontWeight="SemiBold"/>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

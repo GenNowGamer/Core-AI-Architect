@@ -1,0 +1,288 @@
+{
+  "ssotVersion": "1.0.0",
+  "project": {
+    "id": "core-lottery-generator",
+    "name": "Core Lottery Generator",
+    "description": "the App should be setup in a wizard format, first screen for picking which Illinois Lottery game to generate number for (you will have to leverage online sources to gather which Illinois lottery games are playable currently). 2nd screen is to decide how many tickets to generate numbers for (could be just a text box). 3rd screen will display each Lottery ticket with (blank lottery balls) at first. there will be a \u0022Generate Numbers\u0022 button on this 3rd screen, and when pressed the lottery balls will have a cycle animation that plays on the balls until a number is generated for that ball(s). The final UI will show each lottery game card with the finalized numbers for each ticket.\r\n\r\nWorkflow=\r\nScreen 1: Pick Illinois Lottery Game\r\nScreen 2: Ticket Count (Text Box)\r\nScreen 3: Ticket Cards with blank balls - Generate Button - Cycle Animation - Final Numbers\r\n\r\nGames: \r\n1. Power Ball\r\n2. Mega Millions\r\n3. Extra Shot Lotto\r\n4. Pick 4 (Plus Fireball)\r\n5. Pick 3 (Plus Fireball)\r\n6. LuckyDay Lotto\r\n7. Hot Wins\r\n\r\nAgent may fetch current IL games and rules once and cache.",
+    "owner": "CoreSynth Studios",
+    "tags": [
+      "wpf-desktop"
+    ]
+  },
+  "environment": {
+    "targetOs": "Windows 11",
+    "runtime": ".NET 8",
+    "uiFramework": "WPF",
+    "language": "C#"
+  },
+  "architecture": {
+    "pattern": "MVVM",
+    "layers": [
+      "UI",
+      "Application",
+      "Domain",
+      "Infrastructure"
+    ],
+    "modules": [
+      {
+        "name": "AppShell",
+        "description": "Application entry and navigation shell.",
+        "dependencies": []
+      },
+      {
+        "name": "CoreLogic",
+        "description": "Main product behavior.",
+        "dependencies": [
+          "AppShell"
+        ]
+      }
+    ]
+  },
+  "ui": {
+    "theme": "Fluent",
+    "navigationPattern": "Window\u002BDialogs",
+    "screens": [
+      {
+        "id": "main",
+        "title": "Main",
+        "route": "/",
+        "controls": [
+          {
+            "id": "optionsPicker",
+            "type": "ComboBox",
+            "label": "Options",
+            "action": "SelectOption"
+          },
+          {
+            "id": "generateButton",
+            "type": "Button",
+            "label": "Generate",
+            "action": "GenerateResults"
+          }
+        ]
+      },
+      {
+        "id": "history",
+        "title": "History",
+        "route": "/history",
+        "controls": [
+          {
+            "id": "historyList",
+            "type": "ListView",
+            "label": "Past results",
+            "action": "ViewHistory"
+          },
+          {
+            "id": "saveButton",
+            "type": "Button",
+            "label": "Save",
+            "action": "SaveHistory"
+          }
+        ]
+      },
+      {
+        "id": "settings",
+        "title": "Settings",
+        "route": "/settings",
+        "controls": [
+          {
+            "id": "settingsSaveButton",
+            "type": "Button",
+            "label": "Save settings",
+            "action": "SaveSettings"
+          }
+        ]
+      }
+    ]
+  },
+  "domain": {
+    "entities": [
+      {
+        "name": "ResultItem",
+        "description": "A generated result the user can view or save.",
+        "fields": [
+          {
+            "name": "Id",
+            "type": "Guid",
+            "required": true
+          },
+          {
+            "name": "DisplayText",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "CreatedAt",
+            "type": "DateTime",
+            "required": true
+          }
+        ]
+      },
+      {
+        "name": "OptionChoice",
+        "description": "A selectable option the user can pick.",
+        "fields": [
+          {
+            "name": "Id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "Label",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "IsSelected",
+            "type": "bool",
+            "required": false
+          }
+        ]
+      },
+      {
+        "name": "HistoryEntry",
+        "description": "A saved record from a previous run.",
+        "fields": [
+          {
+            "name": "Id",
+            "type": "Guid",
+            "required": true
+          },
+          {
+            "name": "Summary",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "SavedAt",
+            "type": "DateTime",
+            "required": true
+          }
+        ]
+      },
+      {
+        "name": "AppSettings",
+        "description": "User preferences for the application.",
+        "fields": [
+          {
+            "name": "ThemePreference",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "LastUsedOption",
+            "type": "string",
+            "required": false
+          }
+        ]
+      }
+    ]
+  },
+  "workflows": [
+    {
+      "id": "generateResults",
+      "name": "Generate Results",
+      "trigger": "generateButton",
+      "steps": [
+        "Read the user\u0027s current choices",
+        "Create the result using the app rules",
+        "Show the result on screen"
+      ],
+      "errorHandling": {
+        "strategy": "ShowMessageBox",
+        "logLevel": "Warning"
+      }
+    },
+    {
+      "id": "selectOption",
+      "name": "Select Option",
+      "trigger": "optionsPicker",
+      "steps": [
+        "Show available options",
+        "Remember the user\u0027s selection",
+        "Update the main screen"
+      ],
+      "errorHandling": {
+        "strategy": "ShowMessageBox",
+        "logLevel": "Warning"
+      }
+    },
+    {
+      "id": "saveHistory",
+      "name": "Save History",
+      "trigger": "saveButton",
+      "steps": [
+        "Collect the current result",
+        "Store it using the chosen memory setting",
+        "Confirm it was saved"
+      ],
+      "errorHandling": {
+        "strategy": "ShowMessageBox",
+        "logLevel": "Warning"
+      }
+    },
+    {
+      "id": "saveSettings",
+      "name": "Save Settings",
+      "trigger": "settingsSaveButton",
+      "steps": [
+        "Read settings from the screen",
+        "Validate values",
+        "Persist settings"
+      ],
+      "errorHandling": {
+        "strategy": "ShowMessageBox",
+        "logLevel": "Warning"
+      }
+    }
+  ],
+  "constraints": {
+    "allowedLibraries": [
+      "CommunityToolkit.Mvvm",
+      "Microsoft.Extensions.DependencyInjection"
+    ],
+    "forbiddenLibraries": [],
+    "loggingRequired": true,
+    "telemetryAllowed": false,
+    "thirdPartyBootloadersAllowed": false
+  },
+  "data": {
+    "storage": {
+      "type": "LocalJson",
+      "connectionStringMode": "None",
+      "migrationsRequired": false
+    }
+  },
+  "build": {
+    "outputType": "WinExe",
+    "configuration": [
+      "Debug",
+      "Release"
+    ],
+    "targets": [
+      {
+        "name": "win-x64",
+        "runtimeIdentifier": "win-x64"
+      }
+    ]
+  },
+  "deployment": {
+    "packaging": "None",
+    "autoUpdate": false
+  },
+  "testing": {
+    "unitTestFramework": "xUnit",
+    "uiTestFramework": "FlaUI",
+    "coverageTarget": 0.6
+  },
+  "documentation": {
+    "generateReadme": true,
+    "generateArchitectureDoc": true,
+    "sections": [
+      "Overview",
+      "Architecture",
+      "Workflows",
+      "Entities"
+    ]
+  }
+}
