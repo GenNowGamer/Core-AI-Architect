@@ -373,7 +373,7 @@ public class WizardBuilderTests
     [InlineData("web_api")]
     [InlineData("cli_tool")]
     [InlineData("powershell_module")]
-    public void SmartBuilder_MinimalAnswers_PassesReadiness(string profileId)
+    public void BlueprintCompiler_MinimalAnswers_PassesReadiness(string profileId)
     {
         var catalog = new SchemaCatalog();
         catalog.LoadFromDirectory(SchemasDir);
@@ -384,11 +384,7 @@ public class WizardBuilderTests
             ProfileId = profileId,
             ProjectName = "Demo App",
             Description = "A demo application for testing the wizard builder.",
-            Capabilities =
-            {
-                AppCapability.GenerateResults,
-                AppCapability.SaveHistory
-            },
+            SavePastResults = true,
             Memory = MemoryChoice.SimpleFiles
         };
 
@@ -403,6 +399,38 @@ public class WizardBuilderTests
         Assert.NotEmpty(doc.Domain.Entities);
         Assert.NotEmpty(doc.Workflows);
         Assert.NotEmpty(doc.Build.Targets);
+    }
+
+    [Fact]
+    public void BlueprintTemplates_Lottery_HasGenerateAndResults()
+    {
+        var catalog = new SchemaCatalog();
+        catalog.LoadFromDirectory(SchemasDir);
+        var profile = catalog.RequireById("wpf_desktop");
+        var answers = new WizardAnswers
+        {
+            ProfileId = "wpf_desktop",
+            ProjectName = "Core Lottery Generator",
+            Description = "Pick a game, enter ticket count, generate numbers."
+        };
+        var compat = new CompatibilityEngine();
+        compat.ApplySafeDefaults(answers, profile);
+
+        var compiler = new BlueprintCompiler();
+        var doc = compiler.BuildNew(answers, profile, seedMainScreen: false);
+        BlueprintTemplates.Apply("lottery", doc, profile);
+        doc = compiler.Compile(doc, answers, profile);
+
+        Assert.Contains(doc.Ui.Screens, s => s.Title.Contains("Lotto", StringComparison.OrdinalIgnoreCase));
+        var main = doc.Ui.Screens[0];
+        Assert.Contains(main.Controls, c => c.Id == "gamePicker");
+        Assert.Contains(main.Controls, c => c.Id == "ticketCount");
+        Assert.Contains(main.Controls, c => c.Id == "generateButton");
+        Assert.Contains(main.Controls, c => c.Id == "resultsList");
+        Assert.DoesNotContain(doc.Ui.Screens, s => s.Id == "history");
+
+        var ready = new SsotReadinessEngine().Assess(doc, profile);
+        Assert.True(ready.IsValid, string.Join("; ", ready.Errors.Select(e => e.Message)));
     }
 
     [Fact]

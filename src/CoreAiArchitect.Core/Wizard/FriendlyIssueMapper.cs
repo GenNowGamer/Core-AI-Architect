@@ -34,21 +34,24 @@ public static class FriendlyIssueMapper
         }
 
         if (path.Equals("domain.entities", StringComparison.OrdinalIgnoreCase))
-            return "Add at least one data object that describes information your app stores or uses.";
+            return "Your screens need at least one kind of information (we usually create this for you when you add a choice list, place to type, or results list).";
 
         if (path.Equals("ui.screens", StringComparison.OrdinalIgnoreCase)
             || path.Contains("ui.screens", StringComparison.OrdinalIgnoreCase) && path.Contains("controls", StringComparison.OrdinalIgnoreCase))
-            return "Add at least one screen with a button or input so the app has something to show.";
+            return "Add at least one screen with a button, choice list, place to type, or results list.";
 
         if (path.Equals("workflows", StringComparison.OrdinalIgnoreCase))
-            return "Add at least one workflow (a sequence of steps) so the agent knows what happens when people use the app.";
+            return "Add a Button on a screen, then describe what happens when someone clicks it.";
 
         if (path.Equals("build.targets", StringComparison.OrdinalIgnoreCase)
             || path.StartsWith("build.targets", StringComparison.OrdinalIgnoreCase))
-            return "Add a build target such as win-x64 so the agent knows what kind of computer to build for.";
+            return "The blueprint is missing a build target (we usually add win-x64 automatically — try Check again).";
 
         if (path.Equals("architecture", StringComparison.OrdinalIgnoreCase))
-            return "Add at least one layer or module so the agent knows how to organize the code.";
+            return "The blueprint is missing how the code should be organized (try Check again to fill defaults).";
+
+        if (path.Equals("compatibility", StringComparison.OrdinalIgnoreCase))
+            return message;
 
         if (message.Contains("is required", StringComparison.OrdinalIgnoreCase))
             return $"Please fill in: {HumanizePath(path)}. {message}";
@@ -59,7 +62,7 @@ public static class FriendlyIssueMapper
     public static string FormatReport(ValidationResult result, bool includeTechnicalDetails = false)
     {
         if (result.IsValid && !result.Warnings.Any())
-            return "Everything looks ready. You can save and hand this file to an AI coding agent.";
+            return "Everything looks ready. You can save this App Blueprint and hand it to an AI coding agent.";
 
         var lines = new List<string>();
         if (!result.IsValid)

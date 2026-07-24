@@ -8,7 +8,7 @@ This Markdown file is the editable source. Regenerate the PDF with:
 python tools/GenerateUserGuidePdf.py
 ```
 
-This guide explains how to use Core AI Architect to define an application so an AI coding agent can build it from your exported SSOT (single source of truth) JSON.
+This guide explains how to use Core AI Architect to define an application so an AI coding agent can build it from your exported **App Blueprint** JSON (internally an SSOT — single source of truth).
 
 For build/run commands, see [README.md](../README.md).  
 For agent consumption rules, see [SSOT_CONTRACT.md](SSOT_CONTRACT.md).
@@ -18,40 +18,40 @@ For agent consumption rules, see [SSOT_CONTRACT.md](SSOT_CONTRACT.md).
 ## 1. What this tool is (and is not)
 
 **Core AI Architect does not write your app’s code.**  
-It helps you **author a structured blueprint** (the SSOT JSON). You (or an AI agent) then use that blueprint to generate the real solution.
+It helps you **describe what people see and do**. It compiles that into a structured **App Blueprint** (`.ssot.json`). You (or an AI agent) then use that file to generate the real solution.
 
 | This tool does | This tool does not |
 |---|---|
-| Collect project choices in guided sections | Compile or publish the target app |
-| Validate required fields | Invent screens/entities if you left them empty |
-| Export JSON SSOT + Markdown docs | Replace Visual Studio / your coding agent |
+| Guide you through a plain-language wizard | Compile or publish the target app |
+| Let you design screens with everyday “things” | Require you to manage themes, domain entities, or build RIDs by hand |
+| Validate readiness and export JSON + Markdown | Invent screens if you left them empty |
+| | Replace Visual Studio / your coding agent |
 
-**Important:** Empty lists (screens, entities, workflows, modules, etc.) mean “intentionally blank.” A careful agent should **not** invent those for you. Fill the sections that matter for the app you want built.
+**Important:** Empty lists (screens, entities, workflows, modules, etc.) in the JSON mean “intentionally blank.” A careful agent should **not** invent those for you. Fill Screens and Clicks for anything you want built.
 
 ---
 
-## 2. Typical workflow
+## 2. Typical workflow (5 steps)
 
-1. **File → New** — pick a **form profile** (e.g. WPF Desktop App).
-2. Walk the **left section list** (Project → … → Documentation).
-3. Use **Previous / Next** or click a section name.
-4. **Tools → Validate** when you think you’re done.
-5. **File → Save** (keeps your SSOT) and/or **Export JSON** / **Export Markdown**.
-6. Hand the `.ssot.json` (plus [SSOT_CONTRACT.md](SSOT_CONTRACT.md)) to your coding agent.
+1. **File → New app blueprint** (or start from the first wizard step).
+2. **Your idea** — pick app type (Windows desktop / Website·API / Something else), name it, describe what it should do. Optionally start from a **template** (e.g. Number / lottery picker). Use **Get tips from my description** if offered.
+3. **Screens** — add screens; on each screen **Add a thing**: Choice list, Place to type, Button, or Results list. Rename labels to match your app.
+4. **When they click** — for each button, write plain-English steps (one per line).
+5. **Remember stuff?** — optionally turn on History and/or Settings (off by default for simple apps).
+6. **Hand off to AI** — read the app story, **Check again**, then **Save App Blueprint** / **Export for AI agent**.
+7. Hand the `.ssot.json` (plus [SSOT_CONTRACT.md](SSOT_CONTRACT.md)) to your coding agent.
 
-### Form profiles
+Theme, navigation, architecture, storage details, and build targets are filled automatically unless you change them by editing the JSON later.
 
-Profiles prefill environment defaults and tune available enums. They do not create demo content.
+### App types (wizard cards)
 
-| Profile | Best for |
-|---|---|
-| WPF Desktop App | Windows desktop GUI (WPF) |
-| WinPE Tool | WinPE / recovery-style tools |
-| Web API | ASP.NET APIs |
-| CLI Tool | Console commands |
-| PowerShell Module | Cmdlets / modules |
-| Deployment Automation | Pipelines / orchestration |
-| Custom | Broadest option sets (blank canvas) |
+| Card | Profile behind it | Best for |
+|---|---|---|
+| Windows desktop app | `wpf_desktop` | Windows GUI (WPF) |
+| Website / API | `web_api` | ASP.NET APIs |
+| Something else | `custom` | Flexible defaults |
+
+Additional profiles (`cli_tool`, `powershell_module`, etc.) remain available via schemas / PowerShell module.
 
 ---
 
@@ -59,20 +59,18 @@ Profiles prefill environment defaults and tune available enums. They do not crea
 
 | Menu | Action | Purpose |
 |---|---|---|
-| File → New | Start a new SSOT with a profile | Creates empty document + profile defaults |
-| File → Open | Open an existing `.json` SSOT | Continue editing |
-| File → Save / Save As | Persist the SSOT | Your working source of truth file |
-| File → Export JSON | Write SSOT JSON | Handoff file for agents |
-| File → Export Markdown | Write human-readable docs | Overview from filled sections only |
-| Tools → Validate | Check required fields & warnings | Catch missing Project Name, bad triggers, etc. |
-| Tools → Copy PowerShell Command | Clipboard helper | For PowerShell 7+ module workflows |
-| Help | Schemas path + module hint | Orientation |
+| File → New app blueprint | Start fresh | Clears the wizard; begins at Your idea |
+| File → Open | Open an existing App Blueprint | Continue editing (usually lands on Screens) |
+| File → Save / Save As | Persist the blueprint | Working `.ssot.json` file |
+| File → Export for AI agent | Write blueprint JSON | Handoff file for agents |
+| File → Export Markdown | Write human-readable docs | Overview from filled sections |
+| Help → How this works | Short orientation | Five-step overview |
 
 ---
 
-## 4. Section-by-section reference
+## 4. What ends up in the exported JSON
 
-Each section below maps to part of the exported SSOT and tells a coding agent **what to build**.
+The sections below describe the **exported App Blueprint** shape. In the wizard you mostly edit **Your idea**, **Screens**, **Clicks**, and **Remember**; the compiler fills domain entities, workflows, architecture, build, and related fields for you.
 
 ---
 
@@ -86,15 +84,15 @@ Each section below maps to part of the exported SSOT and tells a coding agent **
 | **Project Name** | Yes | Human-readable title, e.g. `Core Lottery Generator` | Window titles, README headings, branding text |
 | **Description** | Yes | Plain-language purpose and scope | Primary narrative the agent uses to understand *what* to build |
 | **Owner** | No | Person, team, or company | Metadata in docs (optional) |
-| **Tags** | No | Short labels (add one at a time) | Categorization / search metadata in docs |
+| **Tags** | No | Short labels | Categorization / search metadata in docs |
 
-**Tip:** Put *why* and *scope* in Description. Put *structured rules* (entities, screens, workflows) in later sections—not only in the description paragraph.
+**Tip:** Put *why* and *scope* in Description. Put *what people see* on Screens and *what happens on click* in Clicks—not only in the description paragraph.
 
 ---
 
 ### 4.2 Environment
 
-**What it contributes:** Platform stack the generated solution must use.
+**What it contributes:** Platform stack the generated solution must use (usually auto-filled from app type).
 
 | Option | Required? | What it means | Effect on the built app |
 |---|---|---|---|
@@ -103,13 +101,11 @@ Each section below maps to part of the exported SSOT and tells a coding agent **
 | **UI Framework** | Yes | Presentation tech (WPF, WinUI, Console, ASP.NET, …) | Project type and UI libraries |
 | **Language** | Yes | Primary language (C#, PowerShell, F#) | Language of generated code |
 
-**Tip:** Keep UI Framework consistent with later **UI → Navigation Pattern** (e.g. WPF + `Window+Dialogs`).
-
 ---
 
 ### 4.3 Architecture
 
-**What it contributes:** How code is organized (pattern, layers, feature modules).
+**What it contributes:** How code is organized (pattern, layers, feature modules). Usually auto-filled.
 
 | Option | Required? | What it means | Effect on the built app |
 |---|---|---|---|
@@ -125,31 +121,31 @@ Each section below maps to part of the exported SSOT and tells a coding agent **
 | **Description** | What that area does | Scope for that module’s code |
 | **Dependencies** | Other module names it needs | Build order and references between modules |
 
-**Tip:** Modules are *feature areas*, not NuGet package names. Leave empty only if the app is tiny and you accept a single undifferentiated codebase.
-
 ---
 
-### 4.4 UI / Screens and buttons
+### 4.4 UI / Screens
 
 **What it contributes:** Windows/screens, controls, navigation, and look—so the agent knows what to put on screen.
 
-In the **guided wizard**, this is the **Screens and buttons** step. Theme and navigation pattern are chosen earlier (Look and movement). Screens and controls are reviewed and edited here.
+In the wizard this is the **Screens** step. Theme and navigation are chosen automatically for your app type.
 
 | Action | What it does |
 |---|---|
 | **Add Screen** | Adds a new screen to the blueprint |
-| **Remove** (screens) | Deletes the selected screen |
-| **Move Up / Move Down** | Reorders screens (order is saved in the SSOT) |
-| **Add Button** | Adds a clickable action control (usually type `Button`) |
-| **Add Control** | Adds an input/picker control (e.g. `ComboBox`, `TextBox`) |
-| **Remove** (controls) | Deletes the selected control on the current screen |
+| **Remove** (screens) | Deletes the selected screen (History/Settings are controlled on Remember) |
+| **Move Up / Move Down** | Reorders screens |
+| **Choice list** | People pick one option (e.g. lottery game) |
+| **Place to type** | Number or text (e.g. ticket count) |
+| **Button** | Starts work (e.g. Generate) |
+| **Results list** | Shows generated or saved items |
+| **Remove** (things) | Deletes the selected control on the current screen |
 
-The controls list shows **Label (Type)** so you can tell buttons from combo boxes. You can edit the selected control’s **label**, **type** (from profile-allowed values), and **id** (ids are what workflows use as triggers).
+Rename the **Name people will see** so labels match your product. Internal ids are advanced; workflows bind to them automatically.
 
 | Option | Required? | What it means | Effect on the built app |
 |---|---|---|---|
-| **Theme** | Yes | Visual style (Default, Fluent, Custom, …) | Styling approach |
-| **Navigation Pattern** | Yes | How users move between surfaces | Shell: dialogs, tabs, frame, routes, etc. |
+| **Theme** | Yes | Visual style (Default, Fluent, Custom, …) | Styling approach (auto) |
+| **Navigation Pattern** | Yes | How users move between surfaces | Shell pattern (auto) |
 | **Screens** | Strongly recommended | Each window/page/surface | Creates those views |
 | **Controls** (per screen) | Strongly recommended | Buttons, lists, inputs, etc. | Concrete UI elements and actions |
 
@@ -170,17 +166,17 @@ The controls list shows **Label (Type)** so you can tell buttons from combo boxe
 | **Label** | Visible text | Button/caption text |
 | **Action** | Named behavior (e.g. `GenerateNumbers`) | Maps click/command to a workflow or command |
 
-**Tip:** If Screens is empty, the agent has no UI contract—only your Description prose. Use **Add Button** for actions and **Add Control** for lists/text boxes (e.g. a lottery game picker).
+**Tip:** If Screens is empty, the agent has no UI contract—only your Description prose. Use a template (e.g. lottery picker) or add things manually.
 
 ---
 
 ### 4.5 Domain
 
-**What it contributes:** Data model—the “things” the app knows about.
+**What it contributes:** Data model—the “things” the app knows about. Usually **derived** from your screens (choice list → options, results → result items, etc.). Enrich in JSON later if you need lottery-specific fields.
 
 | Option | Required? | What it means | Effect on the built app |
 |---|---|---|---|
-| **Entities** (Add Item) | Strongly recommended | Business objects (e.g. `LotteryGame`, `DrawResult`) | Classes / records / tables |
+| **Entities** | Strongly recommended | Business objects | Classes / records / tables |
 
 **Each entity:**
 
@@ -198,38 +194,38 @@ The controls list shows **Label (Type)** so you can tell buttons from combo boxe
 | **Type** | `string`, `int`, `bool`, `decimal`, `DateTime`, `Guid` | Property / column type |
 | **Required** | Must have a value | Validation / non-nullability |
 
-**Tip:** Encode product rules here when possible (e.g. game name, ball count, min/max). Don’t rely only on the Project Description.
+**Tip:** Encode product rules in Description and Clicks when possible; add richer entities if the agent needs structured game/ticket rules.
 
 ---
 
-### 4.6 Workflows (Workflow Builder)
+### 4.6 Workflows (When they click)
 
-**What it contributes:** User/system processes—what happens when someone clicks Generate, Save, etc.
+**What it contributes:** What happens when someone uses a button.
 
-Uses a dedicated **Workflow Builder**.
+In the wizard this is **When they click** — pick a button by label and edit steps (one per line). Triggers are bound to control ids automatically.
 
 | Option | Required? | What it means | Effect on the built app |
 |---|---|---|---|
-| **Workflows** (Add) | Strongly recommended | Named processes | Commands / use-case methods |
+| **Workflows** | Strongly recommended | Named processes | Commands / use-case methods |
 
 **Each workflow:**
 
 | Field | Meaning | Effect |
 |---|---|---|
-| **Id** | Stable key (e.g. `generateNumbers`) | Code identifier |
+| **Id** | Stable key | Code identifier |
 | **Name** | Display name | Docs and UI labels |
-| **Trigger** | What starts it (prefer a **control Id** from UI) | Wires UI action → workflow |
+| **Trigger** | Starting control **Id** | Wires UI action → workflow |
 | **Steps** | Ordered plain-language steps | Implementation checklist for the agent |
 | **Error Strategy** | How failures are handled | MessageBox vs throw vs retry, etc. |
 | **Log Level** | Severity for logging on errors | Logging behavior |
 
-**Tip:** Fill UI controls first, then set Trigger to those control Ids so validation can warn on mismatches.
+**Tip:** Fill Screens (with buttons) first, then edit Clicks steps.
 
 ---
 
 ### 4.7 Constraints
 
-**What it contributes:** Hard rules the agent must obey (libraries, logging, telemetry).
+**What it contributes:** Hard rules the agent must obey (libraries, logging, telemetry). Usually auto-filled.
 
 | Option | Required? | What it means | Effect on the built app |
 |---|---|---|---|
@@ -243,7 +239,7 @@ Uses a dedicated **Workflow Builder**.
 
 ### 4.8 Data
 
-**What it contributes:** How (and if) the app persists data.
+**What it contributes:** How (and if) the app persists data. Driven largely by **Remember** (Save past results → LocalJson).
 
 | Option | Required? | What it means | Effect on the built app |
 |---|---|---|---|
@@ -253,13 +249,13 @@ Uses a dedicated **Workflow Builder**.
 
 **Tips:**
 - Local file history/settings → often **LocalJson** + connection mode **None**.
-- Real database → SQLite/SQLServer + ConfigFile or UserSecrets as appropriate.
+- Leave Remember off for a simple generate-only app.
 
 ---
 
 ### 4.9 Build
 
-**What it contributes:** How the solution is compiled and for which platforms.
+**What it contributes:** How the solution is compiled and for which platforms. Usually auto-filled (`WinExe`, `win-x64`).
 
 | Option | Required? | What it means | Effect on the built app |
 |---|---|---|---|
@@ -315,41 +311,32 @@ Empty product sections are **omitted** from Markdown export (no filler lorem ips
 
 ---
 
-## 5. Recommended fill order (for a complete handoff)
+## 5. Recommended fill order (wizard)
 
-1. **Project** — Id, Name, Description  
-2. **Environment** — OS, Runtime, UI Framework, Language  
-3. **Architecture** — Pattern; add Layers/Modules if useful  
-4. **UI** — Theme, navigation, screens, controls  
-5. **Domain** — Entities and fields (rules as data)  
-6. **Workflows** — Processes tied to control Ids  
-7. **Constraints** — Libraries, logging, telemetry  
-8. **Data** — Storage choices  
-9. **Build** — Output type + at least one Target (`win-x64`)  
-10. **Deployment** — Packaging  
-11. **Testing** — Frameworks + coverage  
-12. **Documentation** — Flags/sections  
-13. **Validate → Save → Export JSON**
+1. **Your idea** — type, name, description; pick a template if it fits  
+2. **Screens** — at least one screen with meaningful things  
+3. **When they click** — steps for each button  
+4. **Remember** — only if you need History/Settings  
+5. **Hand off** — Check again → Save / Export for AI agent  
+
+Most environment, architecture, domain, constraints, build, testing, and documentation fields are filled automatically.
 
 ---
 
 ## 6. Completeness checklist
 
-Before handing SSOT to an agent, ask:
+Before handing the App Blueprint to an agent, ask:
 
-- [ ] Project Id / Name / Description filled  
-- [ ] Environment matches the kind of app you want  
-- [ ] At least one **screen** with meaningful **controls** (for GUI apps)  
-- [ ] Core **entities** defined (not only described in prose)  
-- [ ] Key **workflows** with steps and triggers  
-- [ ] Data/storage choice matches whether you need history/settings  
-- [ ] Build **target** RID set (e.g. `win-x64`)  
-- [ ] UI test framework makes sense for desktop vs web  
-- [ ] **Validate** reports no unexpected errors  
+- [ ] App name and description filled  
+- [ ] At least one **screen** with meaningful **things** (for GUI apps)  
+- [ ] Each important **button** has click steps  
+- [ ] Remember choices match whether you want History/Settings  
+- [ ] Hand-off **Check again** reports ready (or you accept the listed gaps)  
+- [ ] Build **target** present in JSON (usually auto `win-x64`)  
 
 ---
 
-## 7. After export — using the SSOT
+## 7. After export — using the App Blueprint
 
 1. Keep your saved `.ssot.json` as the contract.  
 2. Point the coding agent at that file and [SSOT_CONTRACT.md](SSOT_CONTRACT.md).  

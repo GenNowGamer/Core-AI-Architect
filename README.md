@@ -1,6 +1,6 @@
 # Core AI Architect
 
-Windows 11 desktop tool that authors a canonical JSON **SSOT** (single source of truth) for AI coding agents.
+Windows 11 desktop tool that authors a canonical JSON **App Blueprint** (SSOT — single source of truth) for AI coding agents.
 
 For current session state, open work, and continuity notes, see [session_handoff.md](session_handoff.md).  
 For the human-readable user guide (PDF), see [docs/Core_AI_Architect_User_Guide.pdf](docs/Core_AI_Architect_User_Guide.pdf).  
@@ -8,19 +8,20 @@ Markdown source for that guide: [docs/USER_GUIDE.md](docs/USER_GUIDE.md).
 
 ## What it does
 
-1. Load a **form profile** schema (`schemas/*.json`)
-2. Guide you through a plain-language **wizard** (app kind, purpose, platform, features, then review screens/data/flows)
-3. On **Screens and buttons**, add/reorder screens and add buttons vs input controls
-4. Validate readiness and export **JSON SSOT** and **Markdown** documentation
+1. Pick an app type and describe what the app should do (optional starter **template**)
+2. Build **screens** with everyday things: choice list, place to type, button, results list
+3. Write plain-English steps for **when someone clicks** each button
+4. Optionally turn on History / Settings (**Remember**)
+5. **Hand off** — readiness check, then save/export **App Blueprint** JSON (and optional Markdown)
 
-There are **no sample projects** or demo inventory data. New documents start from profile defaults plus smart feature templates; you refine them in the review steps.
+Technical defaults (theme, navigation, architecture, build targets) are filled automatically from the form profile. There are **no sample projects** in the product itself; templates only seed screens you can edit.
 
 ## Solution layout
 
 | Project | Role |
 |---|---|
-| `src/CoreAiArchitect.Core` | SSOT model, form schemas, validation, exporters |
-| `src/CoreAiArchitect.App` | WPF authoring UI |
+| `src/CoreAiArchitect.Core` | SSOT model, form schemas, `BlueprintCompiler`, validation, exporters |
+| `src/CoreAiArchitect.App` | WPF guided wizard |
 | `src/CoreAiArchitect.PowerShell` | PowerShell 7+ binary module |
 | `src/CoreAiArchitect.Package` | MSIX packaging (Visual Studio) |
 | `tests/CoreAiArchitect.Tests` | Core unit tests |
@@ -55,19 +56,16 @@ The WPF app still builds and runs via `dotnet` without the packaging tooling.
 
 ## Form profiles
 
-Located in `schemas/`:
+Located in `schemas/` (wizard surfaces the common ones; others remain available to the module/schemas):
 
-- `wpf_desktop`
-- `winpe_tool`
-- `web_api`
-- `cli_tool`
-- `powershell_module`
-- `deployment_automation`
-- `custom`
+- `wpf_desktop` (Windows desktop app)
+- `web_api` (Website / API)
+- `custom` (Something else)
+- Also: `winpe_tool`, `cli_tool`, `powershell_module`, `deployment_automation`
 
 ## Agent contract
 
-See [docs/SSOT_CONTRACT.md](docs/SSOT_CONTRACT.md) for how coding agents must interpret exported SSOT JSON.
+See [docs/SSOT_CONTRACT.md](docs/SSOT_CONTRACT.md) for how coding agents must interpret exported blueprint JSON (`*.ssot.json`).
 
 ## Stack
 

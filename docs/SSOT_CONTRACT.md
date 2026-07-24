@@ -2,6 +2,8 @@
 
 **Input:** a single JSON document with `"ssotVersion": "1.0.0"` matching the Core AI Architect export shape.
 
+In the Core AI Architect UI this file is called an **App Blueprint**; the on-disk format and property names below are unchanged (`*.ssot.json`).
+
 ## Required adherence
 
 Generate a complete solution that strictly follows:
