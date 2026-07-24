@@ -3,8 +3,8 @@
   "project": {
     "id": "core-lottery-generator",
     "name": "Core Lottery Generator",
-    "description": "the App should be setup in a wizard format, first screen for picking which Illinois Lottery game to generate number for (you will have to leverage online sources to gather which Illinois lottery games are playable currently). 2nd screen is to decide how many tickets to generate numbers for (could be just a text box). 3rd screen will display each Lottery ticket with (blank lottery balls) at first. there will be a \u0022Generate Numbers\u0022 button on this 3rd screen, and when pressed the lottery balls will have a cycle animation that plays on the balls until a number is generated for that ball(s). The final UI will show each lottery game card with the finalized numbers for each ticket.\r\n\r\nWorkflow=\r\nScreen 1: Pick Illinois Lottery Game\r\nScreen 2: Ticket Count (Text Box)\r\nScreen 3: Ticket Cards with blank balls - Generate Button - Cycle Animation - Final Numbers\r\n\r\nGames: \r\n1. Power Ball\r\n2. Mega Millions\r\n3. Extra Shot Lotto\r\n4. Pick 4 (Plus Fireball)\r\n5. Pick 3 (Plus Fireball)\r\n6. LuckyDay Lotto\r\n7. Hot Wins\r\n\r\nAgent may fetch current IL games and rules once and cache.",
-    "owner": "CoreSynth Studios",
+    "description": "Here is a list of the features I want Core Lottery Generator to have:\r\n\r\n1. user selects which Illinois lottery game to generate numbers for\r\n2. user will select how many tickets to generate number for\r\n3. user clicks \u0022Generate\u0022\r\n\r\nAgent can grab the rules for all Illinois Lottery games (listed below) and cache them:\r\n\r\n1. Power Ball\r\n2. Mega Millions\r\n3. Lotto\r\n4. Lucky Day Lotto\r\n5. Pick 3\r\n6. Pick 4\r\n\r\nAgent is free to implement the above listed description items in the best way they see fit.  The Agent may ask if they need clarification on any of the build details.",
+    "owner": "",
     "tags": [
       "wpf-desktop"
     ]
@@ -39,25 +39,37 @@
     ]
   },
   "ui": {
-    "theme": "Fluent",
+    "theme": "Default",
     "navigationPattern": "Window\u002BDialogs",
     "screens": [
       {
         "id": "main",
-        "title": "Main",
+        "title": "Generate Your Winning Lotto Numbers",
         "route": "/",
         "controls": [
           {
-            "id": "optionsPicker",
+            "id": "gamePicker",
             "type": "ComboBox",
-            "label": "Options",
+            "label": "Illinois Lottery game",
             "action": "SelectOption"
+          },
+          {
+            "id": "ticketCount",
+            "type": "TextBox",
+            "label": "Ticket Count",
+            "action": "SetTicketCount"
           },
           {
             "id": "generateButton",
             "type": "Button",
             "label": "Generate",
             "action": "GenerateResults"
+          },
+          {
+            "id": "resultsList",
+            "type": "ListView",
+            "label": "Ticket results",
+            "action": "ViewResults"
           }
         ]
       },
@@ -98,27 +110,6 @@
   "domain": {
     "entities": [
       {
-        "name": "ResultItem",
-        "description": "A generated result the user can view or save.",
-        "fields": [
-          {
-            "name": "Id",
-            "type": "Guid",
-            "required": true
-          },
-          {
-            "name": "DisplayText",
-            "type": "string",
-            "required": true
-          },
-          {
-            "name": "CreatedAt",
-            "type": "DateTime",
-            "required": true
-          }
-        ]
-      },
-      {
         "name": "OptionChoice",
         "description": "A selectable option the user can pick.",
         "fields": [
@@ -136,6 +127,43 @@
             "name": "IsSelected",
             "type": "bool",
             "required": false
+          }
+        ]
+      },
+      {
+        "name": "UserInput",
+        "description": "Values the user types on screen (counts, names, notes).",
+        "fields": [
+          {
+            "name": "FieldName",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "Value",
+            "type": "string",
+            "required": true
+          }
+        ]
+      },
+      {
+        "name": "ResultItem",
+        "description": "A generated or listed result shown to the user.",
+        "fields": [
+          {
+            "name": "Id",
+            "type": "Guid",
+            "required": true
+          },
+          {
+            "name": "DisplayText",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "CreatedAt",
+            "type": "DateTime",
+            "required": true
           }
         ]
       },
@@ -180,13 +208,14 @@
   },
   "workflows": [
     {
-      "id": "generateResults",
-      "name": "Generate Results",
+      "id": "generatebutton",
+      "name": "Generate",
       "trigger": "generateButton",
       "steps": [
-        "Read the user\u0027s current choices",
-        "Create the result using the app rules",
-        "Show the result on screen"
+        "Read the selected lottery game",
+        "Read the ticket count",
+        "Create that many tickets using the game\u2019s number rules",
+        "Show the tickets in the results list"
       ],
       "errorHandling": {
         "strategy": "ShowMessageBox",
@@ -194,22 +223,8 @@
       }
     },
     {
-      "id": "selectOption",
-      "name": "Select Option",
-      "trigger": "optionsPicker",
-      "steps": [
-        "Show available options",
-        "Remember the user\u0027s selection",
-        "Update the main screen"
-      ],
-      "errorHandling": {
-        "strategy": "ShowMessageBox",
-        "logLevel": "Warning"
-      }
-    },
-    {
-      "id": "saveHistory",
-      "name": "Save History",
+      "id": "savebutton",
+      "name": "Save",
       "trigger": "saveButton",
       "steps": [
         "Collect the current result",
@@ -222,13 +237,13 @@
       }
     },
     {
-      "id": "saveSettings",
-      "name": "Save Settings",
+      "id": "settingssavebutton",
+      "name": "Save settings",
       "trigger": "settingsSaveButton",
       "steps": [
-        "Read settings from the screen",
-        "Validate values",
-        "Persist settings"
+        "Collect the current result",
+        "Store it using the chosen memory setting",
+        "Confirm it was saved"
       ],
       "errorHandling": {
         "strategy": "ShowMessageBox",

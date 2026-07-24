@@ -1,35 +1,53 @@
 # Session handoff — Core AI Architect
 
-**Last updated:** 2026-07-23  
+**Last updated:** 2026-07-24  
 **Workspace:** `d:\Robert\Desktop\App Project Builds\Core_AI_Architect`  
-**Product:** Core AI Architect (SSOT authoring tool for AI coding agents)
+**Product:** Core AI Architect (App Blueprint / SSOT authoring tool for AI coding agents)
 
 Use this file for current-state / continuity context. Operator build/run basics stay in [README.md](README.md). End-user section reference (PDF): [docs/Core_AI_Architect_User_Guide.pdf](docs/Core_AI_Architect_User_Guide.pdf) (source: [docs/USER_GUIDE.md](docs/USER_GUIDE.md)). Agent export rules stay in [docs/SSOT_CONTRACT.md](docs/SSOT_CONTRACT.md).
 
 ---
 
-## What shipped this session (2026-07-23)
+## What shipped this session (2026-07-24)
 
-Guided-wizard **Screens and buttons** step (Step 7) editing and layout fixes.
+Beginner-friendly **App Blueprint** redesign plus earlier bugfixes from the same chat.
+
+### Product redesign (5-step wizard)
 
 | Change | Detail |
 |---|---|
-| **Add Screen** | Creates a new screen on the live SSOT `ui.screens` list (mirrored in `ReviewScreens`) |
-| **Add Button** / **Add Control** | Adds a Button-like control vs an input control (ComboBox/TextBox/… per profile enums) on the selected screen |
-| **Remove** | Remove selected screen or selected control |
-| **Move Up / Move Down** | Reorders screens in both the list UI and `Document.Ui.Screens` |
-| **Control type** | ComboBox of profile-allowed types; list shows `Label (Type)` |
-| **Layout** | Two-row screen toolbar (no clipped Up/Down); label + type side-by-side; lists/fields grid so control editors are not clipped |
+| **5 steps** | Your idea → Screens → When they click → Remember stuff? → Hand off to AI |
+| **Screen-first** | Users design what people see/do; `BlueprintCompiler` derives entities/workflows |
+| **Add a thing** | Plain English: Choice list, Place to type, Button, Results list (no Add Button vs Add Control) |
+| **Templates** | Blank, Number/lottery picker, Simple form, List + save history (`BlueprintTemplates`) |
+| **Description tips** | Keyword hints from the product description |
+| **Remember** | History/Settings only when opted in (no silent feature-checkbox side effects) |
+| **Terminology** | User-facing **App Blueprint**; export still `*.ssot.json` / `SsotDocument` shape |
 
-Primary code: `MainWindow.xaml` (ReviewScreens), `MainWindowViewModel.cs` (`AddScreen`, `AddButton`, `AddControl`, `MoveScreenUp`/`Down`, `ReviewScreens`/`ReviewControls` observable collections).
+Primary code: `MainWindow.xaml` / `MainWindowViewModel.cs`, `WizardAnswers.cs`, `BlueprintCompiler.cs`, `BlueprintTemplates.cs`, `SsotSmartBuilder.cs` (thin delegate), `FriendlyIssueMapper.cs`, `HelpCatalog.cs`.
 
-**Verify:** `dotnet build CoreAiArchitect.sln -c Release` (succeeded this session). Wizard-related tests: `dotnet test … --filter "FullyQualifiedName~WizardBuilderTests"` (7 passed).
+### Bugfixes (same session)
+
+| Fix | Detail |
+|---|---|
+| **Open wipe** | Opening a blueprint no longer clears Theme/Navigation via ComboBox `SelectionChanged` during list refresh |
+| **Menu contrast** | File/Help submenu text is dark on light popup (top-level stays white on teal) |
+| **Back→Next wipe** | Leaving Features no longer force-rebuilds an existing document (preserved in redesign: document kept once created) |
+
+### Verify
+
+```powershell
+dotnet build CoreAiArchitect.sln
+dotnet test  CoreAiArchitect.sln
+```
+
+Last check this session: build succeeded (0 warnings); **28** tests passed.
 
 ---
 
 ## Product shape (current)
 
-The app shell is a **plain-language guided wizard** (app kind → name → platform → look → memory → features → review screens/data/flows → ready). Smart templates (`SsotSmartBuilder`) pre-populate screens/entities/workflows from feature checkboxes; the review steps let you refine them.
+Plain-language **5-step wizard**. Technical defaults (OS, language, theme, navigation, architecture, build/test) are applied automatically from the form profile.
 
 Older section-editor / UI Layout Builder views remain in the project but are **not** the active MainWindow flow.
 
@@ -38,10 +56,12 @@ Older section-editor / UI Layout Builder views remain in the project but are **n
 ## Architecture (quick)
 
 ```text
-schemas/*.json → CompatibilityEngine + SsotSmartBuilder → SsotDocument
-                              → Validation / Ready check → JSON / Markdown export
+schemas/*.json → CompatibilityEngine + BlueprintCompiler → SsotDocument
+                              → Validation / Hand-off check → JSON / Markdown export
 Core ← App (WPF wizard) + PowerShell module
 ```
+
+Templates seed screens; compiler derives `domain` / `workflows` from controls and button steps.
 
 ---
 
@@ -65,24 +85,20 @@ This machine may only have Windows PowerShell 5.1 — module import will fail th
 
 ---
 
-## User trial — lottery SSOT (open)
+## User trial — lottery App Blueprint
 
 File at repo root (user-authored, **not** a product sample):
 
 - `Core-Lottery-Generator.ssot.json`
 
-**Earlier review:** rich lottery intent lived mainly in **Description**; structured `ui` / `domain` / `workflows` were generic or incomplete. Empty collections still mean “do not invent” per [SSOT_CONTRACT.md](docs/SSOT_CONTRACT.md).
+**Current review (2026-07-24):** Build-ready for the core loop. Main screen has game picker, ticket count, Generate, results list; Generate workflow steps match. Description lists IL games and allows agent to research/cache rules. History/Settings are present (Remember opted in). Domain entities remain generic (`OptionChoice` / `ResultItem`); agent should enrich ticket/game models. Settings Save workflow steps still look copy-pasted from Save History — fix in generated app or re-edit Clicks.
 
-**This session:** Users can now **add/reorder screens** and **add buttons vs controls** (and set control type) on wizard Step 7 — so lottery structure can be authored in-app without the old advanced UI Layout Builder path.
+### Litmus checklist (met for core)
 
-### Gaps still typically needing attention
-
-| Gap | Where to fill |
-|---|---|
-| Screen order / titles / ComboBox vs Button | Wizard → **Screens and buttons** |
-| Domain / game rules as structure | Wizard → **Information it stores** (and Description for overview) |
-| Workflows / triggers = control ids | Wizard → **What happens when someone clicks** |
-| Layers / modules / build RID / test framework | Still limited in friendly wizard — may need export + manual SSOT edit or future steps |
+1. One main screen: game + count + Generate + results  
+2. Generate steps mention game, count, show results  
+3. Description aligns with single-screen flow  
+4. Export still WPF / .NET 8 / agent-compatible JSON  
 
 ---
 
@@ -90,17 +106,16 @@ File at repo root (user-authored, **not** a product sample):
 
 - Schema JSON is generated via `tools/GenerateSchemas.ps1` (avoids PowerShell single-element array collapse).
 - MSIX project is **outside** `CoreAiArchitect.sln` so `dotnet build` stays portable; see `src/CoreAiArchitect.Package/README.md`.
-- No git repository initialized in this workspace as of this handoff.
+- Git repo is initialized in this workspace.
 
 ---
 
 ## Suggested next steps
 
-1. User opens lottery SSOT (or rebuilds via wizard features) and uses **Screens and buttons** to match intended screens/controls; wire flows on the workflows step.
-2. Optional: bring USER_GUIDE “typical workflow” fully in line with the 10-step wizard (partially updated for Screens this session).
-3. Optional: init git when ready to version the product.
-4. Install PowerShell 7 if module smoke-testing is needed on this machine.
-5. When SSOT is complete, hand `*.ssot.json` + [SSOT_CONTRACT.md](docs/SSOT_CONTRACT.md) to an agent to generate the app.
+1. Optional: regenerate user-guide PDF from updated [docs/USER_GUIDE.md](docs/USER_GUIDE.md) (`python tools/GenerateUserGuidePdf.py`).
+2. Hand `Core-Lottery-Generator.ssot.json` + [SSOT_CONTRACT.md](docs/SSOT_CONTRACT.md) to an agent to generate the WPF lottery app.
+3. Install PowerShell 7 if module smoke-testing is needed on this machine.
+4. Optional: turn off History/Settings in Remember and re-export if a thinner lottery app is preferred.
 
 ---
 
@@ -112,5 +127,5 @@ File at repo root (user-authored, **not** a product sample):
 | [docs/Core_AI_Architect_User_Guide.pdf](docs/Core_AI_Architect_User_Guide.pdf) | End-user guide (PDF) — regenerate from USER_GUIDE.md after guide edits |
 | [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Markdown source for the user guide PDF |
 | [session_handoff.md](session_handoff.md) | This file — session continuity and open work |
-| [docs/SSOT_CONTRACT.md](docs/SSOT_CONTRACT.md) | Rules for agents consuming exported SSOT |
+| [docs/SSOT_CONTRACT.md](docs/SSOT_CONTRACT.md) | Rules for agents consuming exported SSOT / App Blueprint JSON |
 | [src/CoreAiArchitect.Package/README.md](src/CoreAiArchitect.Package/README.md) | MSIX / Visual Studio packaging only |

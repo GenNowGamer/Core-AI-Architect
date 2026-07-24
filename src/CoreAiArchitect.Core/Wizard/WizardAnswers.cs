@@ -5,25 +5,20 @@ namespace CoreAiArchitect.Core.Wizard;
 
 public enum WizardStep
 {
-    AppKind = 0,
-    NameAndPurpose = 1,
-    Platform = 2,
-    LookAndFeel = 3,
-    Memory = 4,
-    Capabilities = 5,
-    ReviewScreens = 6,
-    ReviewData = 7,
-    ReviewWorkflows = 8,
-    Ready = 9
+    YourIdea = 0,
+    Screens = 1,
+    WhenTheyClick = 2,
+    RememberStuff = 3,
+    HandOff = 4
 }
 
-public enum AppCapability
+/// <summary>Plain-language widget kinds shown in the Screens step.</summary>
+public enum BlueprintThingKind
 {
-    PickOptions,
-    GenerateResults,
-    SaveHistory,
-    SettingsScreen,
-    ReviewPastResults
+    ChoiceList,
+    PlaceToType,
+    Button,
+    ResultsList
 }
 
 public enum MemoryChoice
@@ -47,6 +42,8 @@ public sealed class WizardAnswers : INotifyPropertyChanged
     private string _theme = "Default";
     private string _navigationPattern = "Window+Dialogs";
     private MemoryChoice _memory = MemoryChoice.None;
+    private bool _savePastResults;
+    private bool _includeSettingsScreen;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -62,7 +59,24 @@ public sealed class WizardAnswers : INotifyPropertyChanged
     public string NavigationPattern { get => _navigationPattern; set => Set(ref _navigationPattern, value); }
     public MemoryChoice Memory { get => _memory; set => Set(ref _memory, value); }
 
-    public HashSet<AppCapability> Capabilities { get; set; } = new();
+    public bool SavePastResults
+    {
+        get => _savePastResults;
+        set
+        {
+            if (!Set(ref _savePastResults, value)) return;
+            if (value && Memory == MemoryChoice.None)
+                Memory = MemoryChoice.SimpleFiles;
+            if (!value && !IncludeSettingsScreen)
+                Memory = MemoryChoice.None;
+        }
+    }
+
+    public bool IncludeSettingsScreen
+    {
+        get => _includeSettingsScreen;
+        set => Set(ref _includeSettingsScreen, value);
+    }
 
     public string DerivedProjectId =>
         string.IsNullOrWhiteSpace(ProjectName)
@@ -71,24 +85,32 @@ public sealed class WizardAnswers : INotifyPropertyChanged
 
     public static string ProfileLabel(string profileId) => profileId switch
     {
-        "wpf_desktop" => "Desktop window app",
+        "wpf_desktop" => "Windows desktop app",
+        "web_api" => "Website / API",
+        "custom" => "Something else",
         "winpe_tool" => "Recovery-style tool",
-        "web_api" => "Website API",
         "cli_tool" => "Command-line tool",
         "powershell_module" => "PowerShell module",
         "deployment_automation" => "Automation pipeline",
-        "custom" => "Something else",
         _ => profileId
     };
 
-    public static string CapabilityLabel(AppCapability capability) => capability switch
+    public static string ThingLabel(BlueprintThingKind kind) => kind switch
     {
-        AppCapability.PickOptions => "Users pick from options",
-        AppCapability.GenerateResults => "Create or generate results",
-        AppCapability.SaveHistory => "Save history for later",
-        AppCapability.SettingsScreen => "Include a settings screen",
-        AppCapability.ReviewPastResults => "Review past results",
-        _ => capability.ToString()
+        BlueprintThingKind.ChoiceList => "Choice list",
+        BlueprintThingKind.PlaceToType => "Place to type",
+        BlueprintThingKind.Button => "Button",
+        BlueprintThingKind.ResultsList => "Results list",
+        _ => kind.ToString()
+    };
+
+    public static string ThingDescription(BlueprintThingKind kind) => kind switch
+    {
+        BlueprintThingKind.ChoiceList => "Let people pick one option from a list.",
+        BlueprintThingKind.PlaceToType => "A box where people type a number or text.",
+        BlueprintThingKind.Button => "Something people click to make the app do work.",
+        BlueprintThingKind.ResultsList => "A place to show generated or saved items.",
+        _ => string.Empty
     };
 
     private static string slugify(string value)

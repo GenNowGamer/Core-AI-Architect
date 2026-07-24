@@ -10,21 +10,6 @@ using CoreAiArchitect.Core.Wizard;
 
 namespace CoreAiArchitect.App.ViewModels;
 
-public partial class CapabilityOption : ObservableObject
-{
-    public CapabilityOption(AppCapability capability, string label, string description)
-    {
-        Capability = capability;
-        Label = label;
-        Description = description;
-    }
-
-    public AppCapability Capability { get; }
-    public string Label { get; }
-    public string Description { get; }
-    [ObservableProperty] private bool _isSelected;
-}
-
 public partial class AppKindOption : ObservableObject
 {
     public AppKindOption(string profileId, string title, string description)
@@ -40,16 +25,56 @@ public partial class AppKindOption : ObservableObject
     [ObservableProperty] private bool _isSelected;
 }
 
+public partial class BlueprintTemplateOption : ObservableObject
+{
+    public BlueprintTemplateOption(string id, string title, string description)
+    {
+        Id = id;
+        Title = title;
+        Description = description;
+    }
+
+    public string Id { get; }
+    public string Title { get; }
+    public string Description { get; }
+    [ObservableProperty] private bool _isSelected;
+}
+
+public partial class ClickFlowOption : ObservableObject
+{
+    public ClickFlowOption(ControlInfo button, WorkflowInfo workflow)
+    {
+        Button = button;
+        Workflow = workflow;
+        StepsText = string.Join(Environment.NewLine, workflow.Steps);
+    }
+
+    public ControlInfo Button { get; }
+    public WorkflowInfo Workflow { get; }
+    public string ButtonLabel => string.IsNullOrWhiteSpace(Button.Label) ? Button.Id : Button.Label;
+
+    [ObservableProperty] private string _stepsText = string.Empty;
+
+    partial void OnStepsTextChanged(string value)
+    {
+        Workflow.Steps = value
+            .Split(new[] { "\r\n", "\n" }, StringSplitOptions.None)
+            .Select(s => s.Trim())
+            .Where(s => s.Length > 0)
+            .ToList();
+    }
+}
+
 public partial class MainWindowViewModel : ObservableObject
 {
     private readonly ISchemaCatalogService _schemaCatalog;
     private readonly IDialogService _dialogs;
     private readonly ISsotDocumentService _documents;
     private readonly CompatibilityEngine _compatibility = new();
-    private readonly SsotSmartBuilder _smartBuilder = new();
+    private readonly BlueprintCompiler _compiler = new();
     private readonly SsotReadinessEngine _readiness = new();
-    private bool _reviewEdited;
-    private bool _suppressCompatPrompt;
+    private bool _suppressKindChange;
+    private bool _documentInitialized;
 
     public MainWindowViewModel(
         ISchemaCatalogService schemaCatalog,
@@ -63,75 +88,52 @@ public partial class MainWindowViewModel : ObservableObject
 
         AppKinds = new ObservableCollection<AppKindOption>
         {
-            new("wpf_desktop", "Desktop window app", "A Windows app with windows, buttons, and forms (WPF)."),
-            new("web_api", "Website API", "A backend that other apps or websites call."),
-            new("cli_tool", "Command-line tool", "An app you run in a terminal with commands."),
-            new("powershell_module", "PowerShell module", "Commands you import into PowerShell."),
-            new("winpe_tool", "Recovery-style tool", "A guided tool for recovery or setup scenarios."),
-            new("deployment_automation", "Automation pipeline", "Stages and tasks that run in order."),
-            new("custom", "Something else", "Start with flexible defaults and refine as you go.")
+            new("wpf_desktop", "Windows desktop app", "A normal Windows program with windows and buttons."),
+            new("web_api", "Website / API", "A backend that websites or other apps call."),
+            new("custom", "Something else", "We’ll use flexible defaults you can refine later.")
         };
 
-        Capabilities = new ObservableCollection<CapabilityOption>
-        {
-            new(AppCapability.PickOptions, WizardAnswers.CapabilityLabel(AppCapability.PickOptions),
-                "Example: choose a game, mode, or category."),
-            new(AppCapability.GenerateResults, WizardAnswers.CapabilityLabel(AppCapability.GenerateResults),
-                "Example: create numbers, reports, or recommendations."),
-            new(AppCapability.SaveHistory, WizardAnswers.CapabilityLabel(AppCapability.SaveHistory),
-                "Keep past runs so they can be opened again."),
-            new(AppCapability.ReviewPastResults, WizardAnswers.CapabilityLabel(AppCapability.ReviewPastResults),
-                "A place to browse what was saved before."),
-            new(AppCapability.SettingsScreen, WizardAnswers.CapabilityLabel(AppCapability.SettingsScreen),
-                "A screen for preferences.")
-        };
+        Templates = new ObservableCollection<BlueprintTemplateOption>(
+            BlueprintTemplates.All.Select(t => new BlueprintTemplateOption(t.Id, t.Title, t.Description)));
 
         Answers = new WizardAnswers();
         SelectedAppKind = AppKinds[0];
         AppKinds[0].IsSelected = true;
-        ApplyProfileDefaults(SelectedAppKind.ProfileId, quiet: true);
-        CurrentStep = WizardStep.AppKind;
+        SelectedTemplate = Templates[0];
+        Templates[0].IsSelected = true;
+        ApplyProfileDefaults(SelectedAppKind.ProfileId);
+        CurrentStep = WizardStep.YourIdea;
         UpdateStepChrome();
+        RefreshDescriptionTips();
     }
 
     public ObservableCollection<AppKindOption> AppKinds { get; }
-    public ObservableCollection<CapabilityOption> Capabilities { get; }
-    public ObservableCollection<string> AvailableThemes { get; } = new();
-    public ObservableCollection<string> AvailableNavigationPatterns { get; } = new();
-    public ObservableCollection<string> AvailableOsOptions { get; } = new()
-    {
-        "Windows 11", "Windows 10", "Windows Server 2022", "Cross-Platform"
-    };
-    public ObservableCollection<string> AvailableLanguages { get; } = new() { "C#", "PowerShell", "F#" };
-    public ObservableCollection<string> ReadyMessages { get; } = new();
-    public ObservableCollection<string> TriggerOptions { get; } = new();
+    public ObservableCollection<BlueprintTemplateOption> Templates { get; }
     public ObservableCollection<ScreenInfo> ReviewScreens { get; } = new();
     public ObservableCollection<ControlInfo> ReviewControls { get; } = new();
-    public ObservableCollection<string> AvailableControlTypes { get; } = new();
+    public ObservableCollection<ClickFlowOption> ClickFlows { get; } = new();
+    public ObservableCollection<string> ReadyMessages { get; } = new();
+    public ObservableCollection<string> DescriptionTips { get; } = new();
 
     public WizardAnswers Answers { get; }
 
     public IReadOnlyList<(WizardStep Step, string Title)> StepList { get; } = new (WizardStep, string)[]
     {
-        (WizardStep.AppKind, "App kind"),
-        (WizardStep.NameAndPurpose, "Name"),
-        (WizardStep.Platform, "Platform"),
-        (WizardStep.LookAndFeel, "Look"),
-        (WizardStep.Memory, "Memory"),
-        (WizardStep.Capabilities, "Features"),
-        (WizardStep.ReviewScreens, "Screens"),
-        (WizardStep.ReviewData, "Data"),
-        (WizardStep.ReviewWorkflows, "Flows"),
-        (WizardStep.Ready, "Ready")
+        (WizardStep.YourIdea, "Your idea"),
+        (WizardStep.Screens, "Screens"),
+        (WizardStep.WhenTheyClick, "Clicks"),
+        (WizardStep.RememberStuff, "Remember"),
+        (WizardStep.HandOff, "Hand off")
     };
 
     [ObservableProperty] private WizardStep _currentStep;
     [ObservableProperty] private AppKindOption? _selectedAppKind;
+    [ObservableProperty] private BlueprintTemplateOption? _selectedTemplate;
     [ObservableProperty] private string _stepTitle = string.Empty;
     [ObservableProperty] private string _stepSubtitle = string.Empty;
     [ObservableProperty] private string _progressText = string.Empty;
     [ObservableProperty] private double _progressValue;
-    [ObservableProperty] private string _statusText = "Start by choosing what kind of app you want.";
+    [ObservableProperty] private string _statusText = "Start by naming your app and saying what it should do.";
     [ObservableProperty] private string _windowTitle = "Core AI Architect";
     [ObservableProperty] private bool _isDirty;
     [ObservableProperty] private bool _canGoBack;
@@ -139,30 +141,37 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private bool _isReadyStep;
     [ObservableProperty] private bool _isReadyToExport;
     [ObservableProperty] private string _readySummary = string.Empty;
-    [ObservableProperty] private MemoryChoice _selectedMemory = MemoryChoice.None;
+    [ObservableProperty] private string _appStory = string.Empty;
+    [ObservableProperty] private string _screenCaption = string.Empty;
     [ObservableProperty] private SsotDocument? _document;
     [ObservableProperty] private ScreenInfo? _selectedScreen;
     [ObservableProperty] private ControlInfo? _selectedControl;
-    [ObservableProperty] private EntityInfo? _selectedEntity;
-    [ObservableProperty] private EntityFieldInfo? _selectedField;
-    [ObservableProperty] private WorkflowInfo? _selectedWorkflow;
+    [ObservableProperty] private ClickFlowOption? _selectedClickFlow;
 
-    public bool MemoryNone
+    public bool SavePastResults
     {
-        get => SelectedMemory == MemoryChoice.None;
-        set { if (value) SelectedMemory = MemoryChoice.None; }
+        get => Answers.SavePastResults;
+        set
+        {
+            if (Answers.SavePastResults == value) return;
+            Answers.SavePastResults = value;
+            OnPropertyChanged();
+            ApplyRememberToDocument();
+            MarkDirty();
+        }
     }
 
-    public bool MemoryFiles
+    public bool IncludeSettingsScreen
     {
-        get => SelectedMemory == MemoryChoice.SimpleFiles;
-        set { if (value) SelectedMemory = MemoryChoice.SimpleFiles; }
-    }
-
-    public bool MemoryDatabase
-    {
-        get => SelectedMemory == MemoryChoice.Database;
-        set { if (value) SelectedMemory = MemoryChoice.Database; }
+        get => Answers.IncludeSettingsScreen;
+        set
+        {
+            if (Answers.IncludeSettingsScreen == value) return;
+            Answers.IncludeSettingsScreen = value;
+            OnPropertyChanged();
+            ApplyRememberToDocument();
+            MarkDirty();
+        }
     }
 
     partial void OnSelectedAppKindChanged(AppKindOption? value)
@@ -170,18 +179,15 @@ public partial class MainWindowViewModel : ObservableObject
         foreach (var kind in AppKinds)
             kind.IsSelected = kind == value;
 
-        if (value is null || _suppressCompatPrompt) return;
-        ApplyProfileDefaults(value.ProfileId, quiet: false);
+        if (value is null || _suppressKindChange) return;
+        ApplyProfileDefaults(value.ProfileId);
+        MarkDirty();
     }
 
-    partial void OnSelectedMemoryChanged(MemoryChoice value)
+    partial void OnSelectedTemplateChanged(BlueprintTemplateOption? value)
     {
-        Answers.Memory = value;
-        OnPropertyChanged(nameof(MemoryNone));
-        OnPropertyChanged(nameof(MemoryFiles));
-        OnPropertyChanged(nameof(MemoryDatabase));
-        if (!_suppressCompatPrompt)
-            EnsureCompatibleOrRevert();
+        foreach (var t in Templates)
+            t.IsSelected = t == value;
     }
 
     partial void OnCurrentStepChanged(WizardStep value) => UpdateStepChrome();
@@ -190,6 +196,12 @@ public partial class MainWindowViewModel : ObservableObject
     {
         ReloadReviewControls();
         SelectedControl = ReviewControls.FirstOrDefault();
+        ScreenCaption = BlueprintCompiler.ScreenCaption(value);
+    }
+
+    partial void OnSelectedClickFlowChanged(ClickFlowOption? value)
+    {
+        // no-op; binding edits StepsText
     }
 
     [RelayCommand]
@@ -197,15 +209,23 @@ public partial class MainWindowViewModel : ObservableObject
     {
         if (!ValidateCurrentStep()) return;
 
-        if (CurrentStep == WizardStep.Capabilities)
-            RebuildDocumentFromAnswers(force: true);
+        if (CurrentStep == WizardStep.YourIdea)
+            EnsureDocumentFromIdea();
 
-        if (CurrentStep < WizardStep.Ready)
+        if (CurrentStep == WizardStep.WhenTheyClick)
+            SyncClickFlowStepsToDocument();
+
+        if (CurrentStep == WizardStep.RememberStuff)
+            ApplyRememberToDocument();
+
+        if (CurrentStep < WizardStep.HandOff)
         {
             CurrentStep++;
-            if (CurrentStep is WizardStep.ReviewScreens or WizardStep.ReviewData or WizardStep.ReviewWorkflows)
+            if (CurrentStep == WizardStep.Screens)
                 SyncReviewSelections();
-            if (CurrentStep == WizardStep.Ready)
+            if (CurrentStep == WizardStep.WhenTheyClick)
+                SyncClickFlowsFromDocument();
+            if (CurrentStep == WizardStep.HandOff)
                 RunReadyCheck();
         }
     }
@@ -213,57 +233,63 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void Back()
     {
-        if (CurrentStep > WizardStep.AppKind)
+        if (CurrentStep > WizardStep.YourIdea)
             CurrentStep--;
+        if (CurrentStep == WizardStep.Screens)
+            SyncReviewSelections();
+        if (CurrentStep == WizardStep.WhenTheyClick)
+            SyncClickFlowsFromDocument();
     }
 
     [RelayCommand]
     private void NewDocument()
     {
         if (!ConfirmDiscard()) return;
-        _suppressCompatPrompt = true;
+        _suppressKindChange = true;
         Answers.ProjectName = string.Empty;
         Answers.Description = string.Empty;
         Answers.Owner = string.Empty;
-        Answers.Capabilities.Clear();
-        foreach (var c in Capabilities) c.IsSelected = false;
+        Answers.SavePastResults = false;
+        Answers.IncludeSettingsScreen = false;
+        Answers.Memory = MemoryChoice.None;
         SelectedAppKind = AppKinds[0];
-        ApplyProfileDefaults(SelectedAppKind.ProfileId, quiet: true);
-        SelectedMemory = MemoryChoice.None;
+        ApplyProfileDefaults(SelectedAppKind.ProfileId);
+        SelectedTemplate = Templates[0];
         Document = null;
-        _reviewEdited = false;
+        _documentInitialized = false;
         _documents.NewDocument(_schemaCatalog.RequireById(SelectedAppKind.ProfileId));
-        CurrentStep = WizardStep.AppKind;
+        CurrentStep = WizardStep.YourIdea;
         IsDirty = false;
-        _suppressCompatPrompt = false;
-        StatusText = "Started a new guided blueprint.";
+        _suppressKindChange = false;
+        DescriptionTips.Clear();
+        StatusText = "Started a new app blueprint.";
         UpdateTitle();
+        RefreshDescriptionTips();
     }
 
     [RelayCommand]
     private void OpenDocument()
     {
         if (!ConfirmDiscard()) return;
-        var path = _dialogs.OpenFile("SSOT JSON|*.json|All files|*.*", "Open SSOT");
+        var path = _dialogs.OpenFile("App Blueprint JSON|*.json;*.ssot.json|All files|*.*", "Open App Blueprint");
         if (path is null) return;
 
-        var profile = _schemaCatalog.RequireById(SelectedAppKind?.ProfileId ?? "wpf_desktop");
-        var doc = _documents.Open(path, profile);
+        var doc = _documents.Open(path);
         HydrateFromDocument(doc);
         Document = doc;
-        _reviewEdited = true;
-        CurrentStep = WizardStep.ReviewScreens;
+        _documentInitialized = true;
+        CurrentStep = WizardStep.Screens;
         SyncReviewSelections();
         IsDirty = false;
-        StatusText = $"Opened {path}. Review and continue to Ready when finished.";
+        StatusText = $"Opened {path}. Review your screens, then continue.";
         UpdateTitle();
     }
 
     [RelayCommand]
     private void SaveDocument()
     {
-        EnsureDocument();
-        CommitAnswersToDocument();
+        EnsureDocumentFromIdea();
+        CompileDocument();
         var path = _documents.FilePath;
         if (string.IsNullOrWhiteSpace(path))
         {
@@ -280,10 +306,10 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void SaveDocumentAs()
     {
-        EnsureDocument();
-        CommitAnswersToDocument();
+        EnsureDocumentFromIdea();
+        CompileDocument();
         var suggested = $"{Answers.DerivedProjectId}.ssot.json";
-        var path = _dialogs.SaveFile("SSOT JSON|*.json", "Save SSOT", suggested);
+        var path = _dialogs.SaveFile("App Blueprint JSON|*.ssot.json;*.json", "Save App Blueprint", suggested);
         if (path is null) return;
         _documents.Save(path);
         IsDirty = false;
@@ -294,19 +320,19 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void ExportJson()
     {
-        EnsureDocument();
-        CommitAnswersToDocument();
-        var path = _dialogs.SaveFile("SSOT JSON|*.json", "Export JSON", $"{Answers.DerivedProjectId}.ssot.json");
+        EnsureDocumentFromIdea();
+        CompileDocument();
+        var path = _dialogs.SaveFile("App Blueprint JSON|*.ssot.json;*.json", "Export for AI agent", $"{Answers.DerivedProjectId}.ssot.json");
         if (path is null) return;
         _documents.ExportJson(path);
-        StatusText = $"Exported JSON to {path}";
+        StatusText = $"Exported blueprint to {path}";
     }
 
     [RelayCommand]
     private void ExportMarkdown()
     {
-        EnsureDocument();
-        CommitAnswersToDocument();
+        EnsureDocumentFromIdea();
+        CompileDocument();
         var path = _dialogs.SaveFile("Markdown|*.md", "Export Markdown", $"{Answers.DerivedProjectId}.md");
         if (path is null) return;
         _documents.ExportMarkdown(path);
@@ -316,8 +342,8 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void RunReadyCheck()
     {
-        EnsureDocument();
-        CommitAnswersToDocument();
+        EnsureDocumentFromIdea();
+        CompileDocument();
         var profile = _schemaCatalog.RequireById(Answers.ProfileId);
         var result = _readiness.Assess(Document!, profile);
         var compat = _compatibility.EvaluateDocument(Document!);
@@ -337,8 +363,9 @@ public partial class MainWindowViewModel : ObservableObject
 
         IsReadyToExport = result.IsValid;
         ReadySummary = FriendlyIssueMapper.FormatReport(result);
+        AppStory = BlueprintCompiler.BuildAppStory(Document!, Answers);
         StatusText = IsReadyToExport
-            ? "Ready — you can save/export for an AI coding agent."
+            ? "Ready — you can save and hand this blueprint to an AI coding agent."
             : "Not ready yet — fix the items listed on this page.";
     }
 
@@ -346,68 +373,120 @@ public partial class MainWindowViewModel : ObservableObject
     private void ShowHelp()
     {
         _dialogs.ShowMessage(
-            "Core AI Architect builds a blueprint (SSOT) for an AI coding agent.\n\n" +
-            "Answer each plain-language step. The app creates screens, data, and workflows for you.\n\n" +
-            "If a choice conflicts with an earlier one, you’ll be stopped and told what to pick instead.");
+            "Core AI Architect helps you describe an app in plain language.\n\n" +
+            "1. Name it and say what it should do.\n" +
+            "2. Build each screen with everyday things (choice lists, boxes to type, buttons, results).\n" +
+            "3. Write what happens when someone clicks a button.\n" +
+            "4. Choose whether it remembers past results.\n" +
+            "5. Hand the App Blueprint to an AI coding agent to build it.\n\n" +
+            "You do not need to know programming or AI tools — just describe what people see and do.");
     }
 
     [RelayCommand]
-    private void MarkReviewEdited()
-    {
-        _reviewEdited = true;
-        IsDirty = true;
-        UpdateTitle();
-    }
+    private void MarkReviewEdited() => MarkDirty();
+
+    [RelayCommand]
+    private void RefreshTips() => RefreshDescriptionTips();
 
     [RelayCommand]
     private void AddScreen()
     {
-        EnsureDocument();
+        EnsureDocumentFromIdea();
         if (Document is null) return;
 
-        var n = Document.Ui.Screens.Count + 1;
+        var n = Document.Ui.Screens.Count(s => !IsSystemScreen(s)) + 1;
         var screen = new ScreenInfo
         {
             Id = $"screen{n}",
             Title = $"Screen {n}",
-            Route = n == 1 ? "/" : $"/screen{n}",
-            Controls = new List<ControlInfo>()
+            Route = n == 1 ? "/" : $"/screen{n}"
         };
         Document.Ui.Screens.Add(screen);
         ReviewScreens.Add(screen);
         SelectedScreen = screen;
-        MarkReviewEdited();
-        StatusText = $"Added screen “{screen.Title}”. Rename it and add buttons or controls.";
+        MarkDirty();
+        StatusText = $"Added screen “{screen.Title}”.";
     }
 
     [RelayCommand]
     private void RemoveScreen()
     {
         if (Document is null || SelectedScreen is null) return;
+        if (IsSystemScreen(SelectedScreen))
+        {
+            _dialogs.ShowMessage("History and Settings are controlled on the Remember step. Turn them off there instead.");
+            return;
+        }
+
+        if (Document.Ui.Screens.Count(s => !IsSystemScreen(s)) <= 1)
+        {
+            _dialogs.ShowMessage("Keep at least one main screen.");
+            return;
+        }
+
         Document.Ui.Screens.Remove(SelectedScreen);
         ReviewScreens.Remove(SelectedScreen);
         SelectedScreen = ReviewScreens.FirstOrDefault();
-        ReloadReviewControls();
-        RefreshTriggerOptions();
-        MarkReviewEdited();
+        MarkDirty();
     }
 
     [RelayCommand]
-    private void MoveScreenUp()
-    {
-        MoveSelectedScreen(-1);
-    }
+    private void MoveScreenUp() => MoveSelectedScreen(-1);
 
     [RelayCommand]
-    private void MoveScreenDown()
+    private void MoveScreenDown() => MoveSelectedScreen(1);
+
+    [RelayCommand]
+    private void AddChoiceList() => AddThing(BlueprintThingKind.ChoiceList);
+
+    [RelayCommand]
+    private void AddPlaceToType() => AddThing(BlueprintThingKind.PlaceToType);
+
+    [RelayCommand]
+    private void AddButtonThing() => AddThing(BlueprintThingKind.Button);
+
+    [RelayCommand]
+    private void AddResultsList() => AddThing(BlueprintThingKind.ResultsList);
+
+    [RelayCommand]
+    private void RemoveThing()
     {
-        MoveSelectedScreen(1);
+        if (SelectedScreen is null || SelectedControl is null) return;
+        SelectedScreen.Controls.Remove(SelectedControl);
+        ReviewControls.Remove(SelectedControl);
+        SelectedControl = ReviewControls.FirstOrDefault();
+        ScreenCaption = BlueprintCompiler.ScreenCaption(SelectedScreen);
+        MarkDirty();
+    }
+
+    private void AddThing(BlueprintThingKind kind)
+    {
+        EnsureDocumentFromIdea();
+        if (Document is null || SelectedScreen is null)
+        {
+            _dialogs.ShowMessage("Select or add a screen first, then add things to it.");
+            return;
+        }
+
+        if (IsSystemScreen(SelectedScreen) && SelectedScreen.Id.Equals("settings", StringComparison.OrdinalIgnoreCase))
+        {
+            // allow editing
+        }
+
+        var profile = _schemaCatalog.RequireById(Answers.ProfileId);
+        var types = BlueprintCompiler.ResolveControlTypes(profile);
+        var control = BlueprintCompiler.CreateThing(kind, types, SelectedScreen.Controls.Count + 1);
+        SelectedScreen.Controls.Add(control);
+        ReviewControls.Add(control);
+        SelectedControl = control;
+        ScreenCaption = BlueprintCompiler.ScreenCaption(SelectedScreen);
+        MarkDirty();
+        StatusText = $"Added {WizardAnswers.ThingLabel(kind).ToLowerInvariant()} “{control.Label}”.";
     }
 
     private void MoveSelectedScreen(int delta)
     {
         if (Document is null || SelectedScreen is null) return;
-
         var index = Document.Ui.Screens.IndexOf(SelectedScreen);
         var newIndex = index + delta;
         if (index < 0 || newIndex < 0 || newIndex >= Document.Ui.Screens.Count) return;
@@ -415,198 +494,111 @@ public partial class MainWindowViewModel : ObservableObject
         var screen = SelectedScreen;
         Document.Ui.Screens.RemoveAt(index);
         Document.Ui.Screens.Insert(newIndex, screen);
-        ReviewScreens.Move(index, newIndex);
-        SelectedScreen = screen;
-        MarkReviewEdited();
-        StatusText = delta < 0
-            ? $"Moved “{screen.Title}” up."
-            : $"Moved “{screen.Title}” down.";
-    }
-
-    [RelayCommand]
-    private void AddButton()
-    {
-        AddControlOfType(ResolveButtonType(), "Button", "DoAction");
-    }
-
-    [RelayCommand]
-    private void AddControl()
-    {
-        var type = ResolveInputControlType();
-        AddControlOfType(type, type, "SelectOption");
-    }
-
-    [RelayCommand]
-    private void RemoveControl()
-    {
-        if (SelectedScreen is null || SelectedControl is null) return;
-        SelectedScreen.Controls.Remove(SelectedControl);
-        ReviewControls.Remove(SelectedControl);
-        SelectedControl = ReviewControls.FirstOrDefault();
-        RefreshTriggerOptions();
-        MarkReviewEdited();
-    }
-
-    private void AddControlOfType(string type, string labelPrefix, string action)
-    {
-        EnsureDocument();
-        if (Document is null || SelectedScreen is null)
+        var reviewIndex = ReviewScreens.IndexOf(screen);
+        if (reviewIndex >= 0)
         {
-            _dialogs.ShowMessage("Select or add a screen first, then add buttons or controls.");
-            return;
+            var reviewNew = Math.Clamp(reviewIndex + delta, 0, ReviewScreens.Count - 1);
+            ReviewScreens.Move(reviewIndex, reviewNew);
         }
 
-        var n = SelectedScreen.Controls.Count + 1;
-        var idBase = char.ToLowerInvariant(type[0]) + type[1..];
-        var control = new ControlInfo
-        {
-            Id = $"{idBase}{n}",
-            Type = type,
-            Label = $"{labelPrefix} {n}",
-            Action = action
-        };
-        SelectedScreen.Controls.Add(control);
-        ReviewControls.Add(control);
-        SelectedControl = control;
-        RefreshTriggerOptions();
-        MarkReviewEdited();
-        StatusText = $"Added {type} “{control.Label}” on “{SelectedScreen.Title}”.";
+        SelectedScreen = screen;
+        MarkDirty();
     }
 
-    private string ResolveButtonType()
+    private void EnsureDocumentFromIdea()
     {
-        EnsureControlTypesLoaded();
-        return AvailableControlTypes.FirstOrDefault(t =>
-                   t.Equals("Button", StringComparison.OrdinalIgnoreCase)
-                   || t.Equals("Command", StringComparison.OrdinalIgnoreCase)
-                   || t.Equals("Cmdlet", StringComparison.OrdinalIgnoreCase)
-                   || t.Equals("Endpoint", StringComparison.OrdinalIgnoreCase))
-               ?? AvailableControlTypes.FirstOrDefault()
-               ?? "Button";
-    }
+        if (_documentInitialized && Document is not null) return;
 
-    private string ResolveInputControlType()
-    {
-        EnsureControlTypesLoaded();
-        return AvailableControlTypes.FirstOrDefault(t =>
-                   t.Equals("ComboBox", StringComparison.OrdinalIgnoreCase)
-                   || t.Equals("TextBox", StringComparison.OrdinalIgnoreCase)
-                   || t.Equals("ListView", StringComparison.OrdinalIgnoreCase)
-                   || t.Equals("Option", StringComparison.OrdinalIgnoreCase)
-                   || t.Equals("Parameter", StringComparison.OrdinalIgnoreCase))
-               ?? AvailableControlTypes.FirstOrDefault(t => !t.Equals("Button", StringComparison.OrdinalIgnoreCase))
-               ?? "ComboBox";
-    }
-
-    private void EnsureControlTypesLoaded()
-    {
-        if (AvailableControlTypes.Count > 0) return;
         var profile = _schemaCatalog.RequireById(Answers.ProfileId);
-        var types = profile.Sections
-            .SelectMany(s => s.Fields)
-            .Where(f => f.Path.Equals("ui.screens", StringComparison.OrdinalIgnoreCase))
-            .SelectMany(f => f.ItemSchema ?? new List<CoreAiArchitect.Core.Models.FormSchema.FieldDefinition>())
-            .Where(f => f.Path.Equals("controls", StringComparison.OrdinalIgnoreCase))
-            .SelectMany(f => f.ItemSchema ?? new List<CoreAiArchitect.Core.Models.FormSchema.FieldDefinition>())
-            .FirstOrDefault(f => f.Path.Equals("type", StringComparison.OrdinalIgnoreCase))
-            ?.Values;
+        var doc = _compiler.BuildNew(Answers, profile, seedMainScreen: false);
+        var templateId = SelectedTemplate?.Id ?? "blank";
+        BlueprintTemplates.Apply(templateId, doc, profile);
+        if (Answers.SavePastResults || Answers.IncludeSettingsScreen)
+            _compiler.Compile(doc, Answers, profile);
+        else
+            _compiler.Compile(doc, Answers, profile);
 
-        AvailableControlTypes.Clear();
-        foreach (var t in types ?? new List<string> { "Button", "TextBox", "ComboBox", "ListView", "CheckBox" })
-            AvailableControlTypes.Add(t);
+        Document = doc;
+        _documents.ReplaceDocument(doc, profile, _documents.FilePath);
+        _documentInitialized = true;
+        MarkDirty();
+        StatusText = templateId == "blank"
+            ? "Created a blank blueprint. Add screens and things next."
+            : $"Started from the “{SelectedTemplate?.Title}” template.";
     }
 
-    private void ApplyProfileDefaults(string profileId, bool quiet)
+    private void CompileDocument()
+    {
+        if (Document is null) return;
+        CommitAnswersToDocument();
+        SyncClickFlowStepsToDocument();
+        var profile = _schemaCatalog.RequireById(Answers.ProfileId);
+        Document = _compiler.Compile(Document, Answers, profile);
+        _documents.ReplaceDocument(Document, profile, _documents.FilePath);
+        SyncReviewSelections();
+        SyncClickFlowsFromDocument();
+    }
+
+    private void ApplyRememberToDocument()
+    {
+        if (Document is null || !_documentInitialized) return;
+        var profile = _schemaCatalog.RequireById(Answers.ProfileId);
+        Document = _compiler.Compile(Document, Answers, profile);
+        _documents.ReplaceDocument(Document, profile, _documents.FilePath);
+        SyncReviewSelections();
+    }
+
+    private void ApplyProfileDefaults(string profileId)
     {
         var profile = _schemaCatalog.RequireById(profileId);
         Answers.ProfileId = profileId;
         _compatibility.ApplySafeDefaults(Answers, profile);
-
-        AvailableThemes.Clear();
-        foreach (var t in _compatibility.AllowedThemes(profile))
-            AvailableThemes.Add(t);
-
-        AvailableNavigationPatterns.Clear();
-        foreach (var n in _compatibility.AllowedNavigationPatterns(profileId, Answers.UiFramework, profile))
-            AvailableNavigationPatterns.Add(n);
-
-        AvailableControlTypes.Clear();
-        var controlTypes = profile.Sections
-            .SelectMany(s => s.Fields)
-            .Where(f => f.Path.Equals("ui.screens", StringComparison.OrdinalIgnoreCase))
-            .SelectMany(f => f.ItemSchema ?? new List<CoreAiArchitect.Core.Models.FormSchema.FieldDefinition>())
-            .Where(f => f.Path.Equals("controls", StringComparison.OrdinalIgnoreCase))
-            .SelectMany(f => f.ItemSchema ?? new List<CoreAiArchitect.Core.Models.FormSchema.FieldDefinition>())
-            .FirstOrDefault(f => f.Path.Equals("type", StringComparison.OrdinalIgnoreCase))
-            ?.Values;
-        foreach (var t in controlTypes ?? new List<string> { "Button", "TextBox", "ComboBox", "ListView", "CheckBox" })
-            AvailableControlTypes.Add(t);
-
-        if (!quiet)
-        {
-            var compat = _compatibility.Evaluate(Answers, profile);
-            if (!compat.IsCompatible)
-            {
-                _dialogs.ShowMessage(
-                    string.Join(Environment.NewLine, compat.Issues.Select(i => $"• {i.Message}\n  {i.SuggestedFix}")),
-                    "That combination won’t work",
-                    isError: true);
-            }
-        }
-
         if (_documents.Document is null || _documents.Profile?.Id != profileId)
             _documents.NewDocument(profile);
-    }
-
-    public bool EnsureCompatibleOrShow() => EnsureCompatibleOrRevert();
-
-    private bool EnsureCompatibleOrRevert()
-    {
-        var profile = _schemaCatalog.RequireById(Answers.ProfileId);
-        var compat = _compatibility.Evaluate(Answers, profile);
-        if (compat.IsCompatible) return true;
-
-        _dialogs.ShowMessage(
-            string.Join(Environment.NewLine + Environment.NewLine,
-                compat.Issues.Select(i => i.Message + Environment.NewLine + i.SuggestedFix)),
-            "That choice doesn’t work with your earlier answers",
-            isError: true);
-
-        _compatibility.ApplySafeDefaults(Answers, profile);
-        OnPropertyChanged(nameof(Answers));
-        return false;
     }
 
     private bool ValidateCurrentStep()
     {
         switch (CurrentStep)
         {
-            case WizardStep.AppKind:
+            case WizardStep.YourIdea:
                 if (SelectedAppKind is null)
                 {
-                    _dialogs.ShowMessage("Pick what kind of app you want to build.");
+                    _dialogs.ShowMessage("Pick what kind of app you want.");
                     return false;
                 }
-                return EnsureCompatibleOrRevert();
 
-            case WizardStep.NameAndPurpose:
                 if (string.IsNullOrWhiteSpace(Answers.ProjectName) || string.IsNullOrWhiteSpace(Answers.Description))
                 {
                     _dialogs.ShowMessage("Enter an app name and a short description of what it should do.");
                     return false;
                 }
+
                 return true;
 
-            case WizardStep.Platform:
-            case WizardStep.LookAndFeel:
-            case WizardStep.Memory:
-                return EnsureCompatibleOrRevert();
-
-            case WizardStep.Capabilities:
-                SyncCapabilitiesFromUi();
-                if (Answers.Capabilities.Count == 0
-                    && !_dialogs.Confirm("You didn’t pick any features. Continue anyway? We’ll still create a simple starter app."))
+            case WizardStep.Screens:
+                if (Document is null || Document.Ui.Screens.Count == 0)
+                {
+                    _dialogs.ShowMessage("Add at least one screen.");
                     return false;
+                }
+
+                if (Document.Ui.Screens.All(s => s.Controls.Count == 0))
+                {
+                    _dialogs.ShowMessage("Add at least one thing to a screen (a button, choice list, place to type, or results list).");
+                    return false;
+                }
+
+                return true;
+
+            case WizardStep.WhenTheyClick:
+                SyncClickFlowStepsToDocument();
+                if (ClickFlows.Count == 0)
+                {
+                    if (!_dialogs.Confirm("You have no buttons yet. Continue anyway? You can go back and add a Button on Screens."))
+                        return false;
+                }
+
                 return true;
 
             default:
@@ -614,40 +606,78 @@ public partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    private void SyncCapabilitiesFromUi()
+    private void SyncReviewSelections()
     {
-        Answers.Capabilities.Clear();
-        foreach (var option in Capabilities.Where(c => c.IsSelected))
-            Answers.Capabilities.Add(option.Capability);
+        if (Document is null) return;
+        ReviewScreens.Clear();
+        foreach (var screen in Document.Ui.Screens)
+            ReviewScreens.Add(screen);
+        SelectedScreen = ReviewScreens.FirstOrDefault();
+        ReloadReviewControls();
+        SelectedControl = ReviewControls.FirstOrDefault();
+        ScreenCaption = BlueprintCompiler.ScreenCaption(SelectedScreen);
     }
 
-    private void RebuildDocumentFromAnswers(bool force)
+    private void ReloadReviewControls()
     {
-        if (!force && _reviewEdited)
+        ReviewControls.Clear();
+        if (SelectedScreen?.Controls is null) return;
+        foreach (var control in SelectedScreen.Controls)
+            ReviewControls.Add(control);
+    }
+
+    private void SyncClickFlowsFromDocument()
+    {
+        if (Document is null) return;
+        CompileDocumentLightWorkflows();
+
+        var previous = SelectedClickFlow?.Button.Id;
+        ClickFlows.Clear();
+        var buttons = Document.Ui.Screens.SelectMany(s => s.Controls)
+            .Where(c => IsButtonType(c.Type))
+            .ToList();
+
+        foreach (var button in buttons)
         {
-            if (!_dialogs.Confirm("You already tweaked the generated screens/data/flows. Rebuild from your answers and replace those tweaks?"))
-                return;
+            var workflow = Document.Workflows.FirstOrDefault(w =>
+                w.Trigger.Equals(button.Id, StringComparison.OrdinalIgnoreCase));
+            if (workflow is null)
+            {
+                workflow = new WorkflowInfo
+                {
+                    Id = button.Id,
+                    Name = button.Label,
+                    Trigger = button.Id,
+                    Steps = { "Read the user's current choices", "Do the action", "Show the outcome on screen" },
+                    ErrorHandling = new ErrorHandlingInfo { Strategy = "ShowMessageBox", LogLevel = "Warning" }
+                };
+                Document.Workflows.Add(workflow);
+            }
+
+            ClickFlows.Add(new ClickFlowOption(button, workflow));
         }
 
-        SyncCapabilitiesFromUi();
-        Answers.Memory = SelectedMemory;
-        var profile = _schemaCatalog.RequireById(Answers.ProfileId);
-        if (!EnsureCompatibleOrRevert()) return;
-
-        Document = _smartBuilder.Build(Answers, profile);
-        var path = _documents.FilePath;
-        _documents.ReplaceDocument(Document, profile, path);
-        _reviewEdited = false;
-        IsDirty = true;
-        SyncReviewSelections();
-        UpdateTitle();
-        StatusText = "Starter blueprint created from your answers. You can tweak it on the next pages.";
+        SelectedClickFlow = ClickFlows.FirstOrDefault(c => c.Button.Id == previous) ?? ClickFlows.FirstOrDefault();
     }
 
-    private void EnsureDocument()
+    private void CompileDocumentLightWorkflows()
     {
-        if (Document is not null) return;
-        RebuildDocumentFromAnswers(force: true);
+        if (Document is null) return;
+        var profile = _schemaCatalog.RequireById(Answers.ProfileId);
+        Document = _compiler.Compile(Document, Answers, profile);
+        _documents.ReplaceDocument(Document, profile, _documents.FilePath);
+    }
+
+    private void SyncClickFlowStepsToDocument()
+    {
+        foreach (var flow in ClickFlows)
+        {
+            flow.Workflow.Steps = flow.StepsText
+                .Split(new[] { "\r\n", "\n" }, StringSplitOptions.None)
+                .Select(s => s.Trim())
+                .Where(s => s.Length > 0)
+                .ToList();
+        }
     }
 
     private void CommitAnswersToDocument()
@@ -665,46 +695,16 @@ public partial class MainWindowViewModel : ObservableObject
         Document.Ui.NavigationPattern = Answers.NavigationPattern;
     }
 
-    private void SyncReviewSelections()
-    {
-        if (Document is null) return;
-        ReloadReviewScreens();
-        SelectedScreen = ReviewScreens.FirstOrDefault();
-        ReloadReviewControls();
-        SelectedControl = ReviewControls.FirstOrDefault();
-        SelectedEntity = Document.Domain.Entities.FirstOrDefault();
-        SelectedField = SelectedEntity?.Fields.FirstOrDefault();
-        SelectedWorkflow = Document.Workflows.FirstOrDefault();
-        RefreshTriggerOptions();
-    }
-
-    private void ReloadReviewScreens()
-    {
-        ReviewScreens.Clear();
-        if (Document is null) return;
-        foreach (var screen in Document.Ui.Screens)
-            ReviewScreens.Add(screen);
-    }
-
-    private void ReloadReviewControls()
-    {
-        ReviewControls.Clear();
-        if (SelectedScreen?.Controls is null) return;
-        foreach (var control in SelectedScreen.Controls)
-            ReviewControls.Add(control);
-    }
-
-    private void RefreshTriggerOptions()
-    {
-        TriggerOptions.Clear();
-        if (Document is null) return;
-        foreach (var id in Document.Ui.Screens.SelectMany(s => s.Controls).Select(c => c.Id).Where(id => !string.IsNullOrWhiteSpace(id)))
-            TriggerOptions.Add(id);
-    }
-
     private void HydrateFromDocument(SsotDocument doc)
     {
-        _suppressCompatPrompt = true;
+        _suppressKindChange = true;
+        var match = AppKinds.FirstOrDefault(k =>
+            string.Equals(_schemaCatalog.RequireById(k.ProfileId).EnvironmentDefaults.UiFramework,
+                doc.Environment.UiFramework, StringComparison.OrdinalIgnoreCase));
+        SelectedAppKind = match ?? AppKinds[0];
+
+        var profile = _schemaCatalog.RequireById(SelectedAppKind.ProfileId);
+        Answers.ProfileId = profile.Id;
         Answers.ProjectName = doc.Project.Name;
         Answers.Description = doc.Project.Description;
         Answers.Owner = doc.Project.Owner;
@@ -714,21 +714,25 @@ public partial class MainWindowViewModel : ObservableObject
         Answers.Language = doc.Environment.Language;
         Answers.Theme = doc.Ui.Theme;
         Answers.NavigationPattern = doc.Ui.NavigationPattern;
-        SelectedMemory = doc.Data.Storage.Type switch
-        {
-            "LocalJson" or "Registry" => MemoryChoice.SimpleFiles,
-            "SQLite" or "SQLServer" or "PostgreSQL" => MemoryChoice.Database,
-            _ => MemoryChoice.None
-        };
-        Answers.Memory = SelectedMemory;
 
-        var match = AppKinds.FirstOrDefault(k =>
-            string.Equals(_schemaCatalog.RequireById(k.ProfileId).EnvironmentDefaults.UiFramework,
-                doc.Environment.UiFramework, StringComparison.OrdinalIgnoreCase));
-        SelectedAppKind = match ?? AppKinds[0];
-        Answers.ProfileId = SelectedAppKind.ProfileId;
-        ApplyProfileDefaults(Answers.ProfileId, quiet: true);
-        _suppressCompatPrompt = false;
+        Answers.SavePastResults = doc.Ui.Screens.Any(s => s.Id.Equals("history", StringComparison.OrdinalIgnoreCase))
+                                  || !string.Equals(doc.Data.Storage.Type, "None", StringComparison.OrdinalIgnoreCase);
+        Answers.IncludeSettingsScreen = doc.Ui.Screens.Any(s => s.Id.Equals("settings", StringComparison.OrdinalIgnoreCase));
+        Answers.Memory = Answers.SavePastResults ? MemoryChoice.SimpleFiles : MemoryChoice.None;
+
+        SelectedTemplate = Templates.FirstOrDefault(t => t.Id == "blank") ?? Templates[0];
+        _documents.SetProfile(profile);
+        _suppressKindChange = false;
+        OnPropertyChanged(nameof(SavePastResults));
+        OnPropertyChanged(nameof(IncludeSettingsScreen));
+        RefreshDescriptionTips();
+    }
+
+    private void RefreshDescriptionTips()
+    {
+        DescriptionTips.Clear();
+        foreach (var tip in BlueprintTemplates.SuggestFromDescription(Answers.Description))
+            DescriptionTips.Add(tip);
     }
 
     private void UpdateStepChrome()
@@ -736,22 +740,17 @@ public partial class MainWindowViewModel : ObservableObject
         var index = (int)CurrentStep;
         ProgressValue = (index + 1) / (double)StepList.Count;
         ProgressText = $"Step {index + 1} of {StepList.Count}";
-        CanGoBack = CurrentStep > WizardStep.AppKind;
-        CanGoNext = CurrentStep < WizardStep.Ready;
-        IsReadyStep = CurrentStep == WizardStep.Ready;
+        CanGoBack = CurrentStep > WizardStep.YourIdea;
+        CanGoNext = CurrentStep < WizardStep.HandOff;
+        IsReadyStep = CurrentStep == WizardStep.HandOff;
 
         (StepTitle, StepSubtitle) = CurrentStep switch
         {
-            WizardStep.AppKind => ("What kind of app?", "Pick the closest match. You can still describe details next."),
-            WizardStep.NameAndPurpose => ("Name and purpose", "Tell us what to call it and what it should do."),
-            WizardStep.Platform => ("Where it runs", "We pre-filled safe defaults for your app kind."),
-            WizardStep.LookAndFeel => ("Look and movement", "Only choices that work with your app kind are listed."),
-            WizardStep.Memory => ("What should it remember?", "This controls whether the app saves information."),
-            WizardStep.Capabilities => ("What should the app do?", "We’ll turn your checks into screens, data, and click-flows."),
-            WizardStep.ReviewScreens => ("Screens and buttons", "Add screens, then Add Button (actions) or Add Control (lists/text boxes). Rename to match your app."),
-            WizardStep.ReviewData => ("Information it stores", "These are the data objects an AI agent will build."),
-            WizardStep.ReviewWorkflows => ("What happens when someone clicks", "Each flow needs steps and a starting button."),
-            WizardStep.Ready => ("Ready check", "We’ll verify everything is compatible and complete."),
+            WizardStep.YourIdea => ("Your idea", "Name your app, say what it should do, and pick a starting shape."),
+            WizardStep.Screens => ("Screens", "Build what people see. Add everyday things — not technical jargon."),
+            WizardStep.WhenTheyClick => ("When they click", "For each button, write the steps in plain English."),
+            WizardStep.RememberStuff => ("Remember stuff?", "Only turn these on if you really need them."),
+            WizardStep.HandOff => ("Hand off to AI", "We’ll check your blueprint and show a plain-English app story."),
             _ => ("Core AI Architect", string.Empty)
         };
     }
@@ -762,10 +761,27 @@ public partial class MainWindowViewModel : ObservableObject
         return _dialogs.Confirm("Discard unsaved changes?");
     }
 
+    private void MarkDirty()
+    {
+        IsDirty = true;
+        UpdateTitle();
+    }
+
     private void UpdateTitle()
     {
         var name = string.IsNullOrWhiteSpace(Answers.ProjectName) ? "Untitled" : Answers.ProjectName;
         var dirty = IsDirty ? "*" : string.Empty;
         WindowTitle = $"Core AI Architect — {name}{dirty}";
     }
+
+    private static bool IsSystemScreen(ScreenInfo screen) =>
+        screen.Id.Equals("history", StringComparison.OrdinalIgnoreCase)
+        || screen.Id.Equals("settings", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsButtonType(string type) =>
+        type.Equals("Button", StringComparison.OrdinalIgnoreCase)
+        || type.Equals("Command", StringComparison.OrdinalIgnoreCase)
+        || type.Equals("Cmdlet", StringComparison.OrdinalIgnoreCase)
+        || type.Equals("Endpoint", StringComparison.OrdinalIgnoreCase)
+        || type.Equals("Stage", StringComparison.OrdinalIgnoreCase);
 }

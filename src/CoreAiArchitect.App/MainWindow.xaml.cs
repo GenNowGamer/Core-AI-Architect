@@ -28,16 +28,19 @@ public partial class MainWindow : Window
         }
     }
 
-    private void PlatformChoice_OnChanged(object sender, SelectionChangedEventArgs e)
+    private void TemplateCard_OnClick(object sender, MouseButtonEventArgs e)
     {
-        if (DataContext is MainWindowViewModel vm && IsLoaded)
-            vm.EnsureCompatibleOrShow();
+        if (sender is FrameworkElement { Tag: BlueprintTemplateOption option }
+            && DataContext is MainWindowViewModel vm)
+        {
+            vm.SelectedTemplate = option;
+        }
     }
 
-    private void LookChoice_OnChanged(object sender, SelectionChangedEventArgs e)
+    private void Description_OnLostFocus(object sender, RoutedEventArgs e)
     {
-        if (DataContext is MainWindowViewModel vm && IsLoaded)
-            vm.EnsureCompatibleOrShow();
+        if (DataContext is MainWindowViewModel vm)
+            vm.RefreshTipsCommand.Execute(null);
     }
 
     private void Review_OnChanged(object sender, SelectionChangedEventArgs e)

@@ -110,4 +110,36 @@
     <Setter Property="Margin" Value="0,0,0,10"/>
     <Setter Property="FontSize" Value="14"/>
   </Style>
+
+  <!-- Teal bar: white top-level labels; light popup: dark submenu text (avoids white-on-white). -->
+  <Style TargetType="Menu">
+    <Setter Property="Background" Value="{StaticResource TealBrush}"/>
+    <Setter Property="Foreground" Value="White"/>
+  </Style>
+
+  <Style TargetType="MenuItem">
+    <Setter Property="Foreground" Value="{StaticResource InkBrush}"/>
+    <Setter Property="Background" Value="Transparent"/>
+    <Style.Triggers>
+      <Trigger Property="Role" Value="TopLevelHeader">
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="Padding" Value="10,4"/>
+      </Trigger>
+      <Trigger Property="Role" Value="TopLevelItem">
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="Padding" Value="10,4"/>
+      </Trigger>
+      <Trigger Property="Role" Value="SubmenuItem">
+        <Setter Property="Foreground" Value="{StaticResource InkBrush}"/>
+        <Setter Property="Background" Value="White"/>
+      </Trigger>
+      <Trigger Property="Role" Value="SubmenuHeader">
+        <Setter Property="Foreground" Value="{StaticResource InkBrush}"/>
+        <Setter Property="Background" Value="White"/>
+      </Trigger>
+      <Trigger Property="IsHighlighted" Value="True">
+        <Setter Property="Background" Value="{StaticResource SandDeepBrush}"/>
+      </Trigger>
+    </Style.Triggers>
+  </Style>
 </ResourceDictionary>

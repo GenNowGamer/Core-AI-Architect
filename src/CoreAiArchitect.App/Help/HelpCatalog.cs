@@ -49,6 +49,58 @@ public static class HelpCatalog
 
     private static IEnumerable<HelpTopic> BuildTopics()
     {
+        // ---- Beginner wizard ----
+        yield return T("wizard.yourIdea", "Your idea",
+            "Name the app, describe it, pick a type, and optionally start from a template.",
+            """
+            This is the product brief an AI coding agent will read first.
+
+            • App type — Windows desktop is the usual choice for home/office tools.
+            • Name + description — write what a person does in the app, not how code is structured.
+            • Templates — “Number / lottery picker” is a good starting shape for ticket/number apps.
+
+            Tip: If your description mentions games, tickets, or Generate, use Get tips — then pick a matching template.
+            """);
+
+        yield return T("wizard.screens", "Screens",
+            "Build what people see using everyday things.",
+            """
+            Add screens, then add things:
+
+            • Choice list — pick one option (like a game).
+            • Place to type — numbers or text (like ticket count).
+            • Button — starts work (like Generate).
+            • Results list — shows what was created.
+
+            Rename labels so they match your app. History and Settings appear only if you turn them on in Remember.
+            """);
+
+        yield return T("wizard.clicks", "When they click",
+            "Describe what each button does in plain English.",
+            """
+            Pick a button on the left. Write one step per line on the right.
+
+            Example for Generate:
+            Read the selected lottery game
+            Read the ticket count
+            Create that many tickets using the game’s rules
+            Show the tickets in the results list
+            """);
+
+        yield return T("wizard.remember", "Remember stuff?",
+            "Optional History and Settings — off by default for simple apps.",
+            """
+            Leave both unchecked unless you need them. Turning them on adds screens automatically; turning them off removes those screens.
+            """);
+
+        yield return T("wizard.handoff", "Hand off to AI",
+            "Check the App Blueprint, read the app story, then save or export.",
+            """
+            The app story should match your screens. If something is missing, go Back and fix Screens or Clicks, then Check again.
+
+            Export for AI agent writes the same JSON blueprint a coding agent can build from.
+            """);
+
         // ---- Sections ----
         yield return T("section.project", "Project",
             "Identity and intent for the whole application.",
@@ -61,7 +113,7 @@ public static class HelpCatalog
             • Description — the main narrative of purpose and scope. Agents lean on this heavily when other sections are thin.
             • Owner / Tags — optional metadata for docs.
 
-            Tip: Put “why/scope” here. Put structured rules (entities, screens, workflows) in later sections—not only in the description paragraph.
+            Tip: Put “why/scope” here. Put structured rules (screens and click steps) in the Screens and Clicks steps—not only in the description paragraph.
             """);
 
         yield return T("section.environment", "Environment",
@@ -748,34 +800,34 @@ public static class HelpCatalog
             Useful if you use the CoreAiArchitect PowerShell module to test/export SSOT outside the GUI. Requires PowerShell 7+.
             """);
 
-        yield return T("file.new", "New Document",
-            "Start a new SSOT with a form profile.",
+        yield return T("file.new", "New App Blueprint",
+            "Start a new App Blueprint from scratch.",
             """
-            Picks a profile (WPF, API, CLI, …) which sets environment defaults and allowed enums. Does not insert demo screens/entities.
+            Clears the wizard and begins at Your idea. Pick a type, name the app, and optionally start from a template.
             """);
 
-        yield return T("file.open", "Open Document",
-            "Open an existing .ssot.json / JSON SSOT.",
+        yield return T("file.open", "Open App Blueprint",
+            "Open an existing App Blueprint (.ssot.json / JSON).",
             """
-            Loads the file and tries to infer the form profile from environment defaults when possible.
+            Loads screens and settings so you can continue editing in the Screens step.
             """);
 
-        yield return T("file.save", "Save",
-            "Writes the current SSOT JSON to disk.",
+        yield return T("file.save", "Save App Blueprint",
+            "Save the current App Blueprint to disk.",
             """
-            Commits form fields first. This is your working source of truth file for later Open/Export.
+            Writes the JSON file an AI coding agent can use to build your app.
             """);
 
-        yield return T("file.exportJson", "Export JSON",
-            "Writes SSOT JSON for agent handoff.",
+        yield return T("file.exportJson", "Export for AI agent",
+            "Export the App Blueprint JSON for an AI coding agent.",
             """
-            Produces the canonical JSON document coding agents should consume with SSOT_CONTRACT.md.
+            Same blueprint content as Save, offered through an export dialog.
             """);
 
         yield return T("file.exportMarkdown", "Export Markdown",
-            "Writes a human-readable summary of filled sections.",
+            "Export a Markdown summary of the blueprint.",
             """
-            Empty sections are omitted (no filler). Useful for reviews; agents should still prefer the JSON SSOT.
+            Empty sections are omitted. Useful for reviews; agents should still prefer the JSON blueprint.
             """);
 
         // Common nested relative keys used as fallbacks
