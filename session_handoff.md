@@ -1,6 +1,6 @@
 # Session handoff — Core AI Architect
 
-**Last updated:** 2026-07-24  
+**Last updated:** 2026-08-14  
 **Workspace:** `d:\Robert\Desktop\App Project Builds\Core_AI_Architect`  
 **Product:** Core AI Architect (App Blueprint / SSOT authoring tool for AI coding agents)
 
@@ -8,7 +8,27 @@ Use this file for current-state / continuity context. Operator build/run basics 
 
 ---
 
-## What shipped this session (2026-07-24)
+## What shipped this session (2026-08-14)
+
+Self-contained **Windows x64 exe** so Core AI Architect can be opened without `dotnet run`.
+
+| Change | Detail |
+|---|---|
+| **Publish profile** | `src/CoreAiArchitect.App/Properties/PublishProfiles/Win64-SelfContained.pubxml` — Release, `win-x64`, self-contained, ReadyToRun |
+| **Output** | `src/CoreAiArchitect.App/bin/publish/win-x64/CoreAiArchitect.exe` (keep the whole folder; includes `schemas\`) |
+| **Desktop shortcut** | `%USERPROFILE%\Desktop\Core AI Architect.lnk` → that exe, working directory = publish folder |
+
+### Verify
+
+```powershell
+dotnet publish src/CoreAiArchitect.App/CoreAiArchitect.App.csproj -c Release -p:PublishProfile=Win64-SelfContained
+```
+
+Then double-click the Desktop shortcut or `CoreAiArchitect.exe` in the publish folder.
+
+---
+
+## What shipped previously (2026-07-24)
 
 Beginner-friendly **App Blueprint** redesign plus earlier bugfixes from the same chat.
 
@@ -72,6 +92,7 @@ cd "d:\Robert\Desktop\App Project Builds\Core_AI_Architect"
 dotnet build CoreAiArchitect.sln -c Release
 dotnet test  CoreAiArchitect.sln -c Release
 dotnet run --project src/CoreAiArchitect.App/CoreAiArchitect.App.csproj -c Release
+# Or open the published exe / Desktop shortcut (see README)
 ```
 
 PowerShell module (requires **PowerShell 7+** / `pwsh`):
@@ -106,6 +127,7 @@ File at repo root (user-authored, **not** a product sample):
 
 - Schema JSON is generated via `tools/GenerateSchemas.ps1` (avoids PowerShell single-element array collapse).
 - MSIX project is **outside** `CoreAiArchitect.sln` so `dotnet build` stays portable; see `src/CoreAiArchitect.Package/README.md`.
+- Everyday launch path is the self-contained folder publish (`Win64-SelfContained`), not MSIX. Do not copy `CoreAiArchitect.exe` out of `bin/publish/win-x64` by itself.
 - Git repo is initialized in this workspace.
 
 ---
@@ -123,7 +145,7 @@ File at repo root (user-authored, **not** a product sample):
 
 | Doc | Role |
 |---|---|
-| [README.md](README.md) | Product overview, build/run, profiles, module import |
+| [README.md](README.md) | Product overview, build/run, self-contained exe publish, profiles, module import |
 | [docs/Core_AI_Architect_User_Guide.pdf](docs/Core_AI_Architect_User_Guide.pdf) | End-user guide (PDF) — regenerate from USER_GUIDE.md after guide edits |
 | [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Markdown source for the user guide PDF |
 | [session_handoff.md](session_handoff.md) | This file — session continuity and open work |
