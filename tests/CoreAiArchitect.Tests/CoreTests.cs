@@ -428,9 +428,26 @@ public class WizardBuilderTests
         Assert.Contains(main.Controls, c => c.Id == "generateButton");
         Assert.Contains(main.Controls, c => c.Id == "resultsList");
         Assert.DoesNotContain(doc.Ui.Screens, s => s.Id == "history");
+        Assert.All(doc.Domain.Entities, e =>
+            Assert.Contains(DomainScaffoldPolicy.ScaffoldMarker, e.Description, StringComparison.OrdinalIgnoreCase));
 
         var ready = new SsotReadinessEngine().Assess(doc, profile);
         Assert.True(ready.IsValid, string.Join("; ", ready.Errors.Select(e => e.Message)));
+    }
+
+    [Fact]
+    public void DomainScaffoldPolicy_AppStory_IncludesAgentGuidance()
+    {
+        var doc = new SsotDocument();
+        doc.Ui.Screens.Add(new ScreenInfo { Id = "main", Title = "Main" });
+        var story = BlueprintCompiler.BuildAppStory(doc, new WizardAnswers
+        {
+            ProjectName = "Demo",
+            ProfileId = "wpf_desktop",
+            Description = "Pick a game and generate tickets."
+        });
+        Assert.Contains(DomainScaffoldPolicy.ScaffoldMarker, story, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("project.description", story, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -446,5 +463,168 @@ public class WizardBuilderTests
         var friendly = FriendlyIssueMapper.ToFriendlyMessage(issue);
         Assert.Contains("Lottery Game Selection", friendly);
         Assert.DoesNotContain("workflows[0]", friendly);
+    }
+
+    [Fact]
+    public void WizardAnswers_ComposeDescription_IncludesAdLibAndRules()
+    {
+        var answers = new WizardAnswers
+        {
+            ProjectName = "GameVault",
+            Audience = "PC gamers",
+            HelpsThem = "manage and back up game save files",
+            FeatureListText = "automatic backups\nmultiple restore points",
+            Connectivity = ConnectivityChoice.Offline,
+            LookStyle = "Modern",
+            Theme = "Fluent",
+            ProductRules = "Support Steam and Epic library folders."
+        };
+
+        var description = answers.ComposeDescription();
+        Assert.Contains("PC gamers", description);
+        Assert.Contains("automatic backups", description);
+        Assert.Contains("offline", description, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Support Steam and Epic", description);
+        Assert.Equal(description, answers.Description);
+    }
+
+    [Fact]
+    public void BlueprintCompiler_SeedAdLibFeatures_AddsButtonsOnBlankMain()
+    {
+        var catalog = new SchemaCatalog();
+        catalog.LoadFromDirectory(SchemasDir);
+        var profile = catalog.RequireById("wpf_desktop");
+        var answers = new WizardAnswers
+        {
+            ProfileId = "wpf_desktop",
+            ProjectName = "GameVault",
+            FeatureListText = "Detect games\nSchedule backups"
+        };
+        answers.ComposeDescription();
+        new CompatibilityEngine().ApplySafeDefaults(answers, profile);
+
+        var compiler = new BlueprintCompiler();
+        var doc = compiler.BuildNew(answers, profile, seedMainScreen: false);
+        BlueprintTemplates.Apply("blank", doc, profile);
+        var seeded = BlueprintCompiler.SeedAdLibFeatures(doc, answers, profile);
+        doc = compiler.Compile(doc, answers, profile);
+
+        Assert.Equal(2, seeded);
+        var main = Assert.Single(doc.Ui.Screens.Where(s => s.Id == "main"));
+        Assert.Contains(main.Controls, c => c.Label.Contains("Detect", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(main.Controls, c => c.Label.Contains("Schedule", StringComparison.OrdinalIgnoreCase));
+        Assert.True(new SsotReadinessEngine().Assess(doc, profile).IsValid);
+    }
+
+    [Fact]
+    public void BlueprintHubAssessor_ReportsAttentionWhenScreensMissing()
+    {
+        var answers = new WizardAnswers
+        {
+            ProjectName = "Demo",
+            Description = "A short description for testing.",
+            ProfileId = "wpf_desktop",
+            TargetOs = "Windows 11",
+            UiFramework = "WPF",
+            Language = "C#"
+        };
+        var assessment = BlueprintHubAssessor.Assess(null, answers, readiness: null);
+        Assert.Contains(assessment.Sections, s => s.Id == "screens" && s.Status == BlueprintSectionStatus.Attention);
+        Assert.True(assessment.DecisionsRemaining >= 1);
+        Assert.Contains("remaining", assessment.ProgressCaption, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void RecommendationEngine_OfflinePersist_SuggestsSqlite()
+    {
+        var answers = new WizardAnswers
+        {
+            ProfileId = "wpf_desktop",
+            ProjectName = "Vault",
+            Connectivity = ConnectivityChoice.Offline,
+            MultiDevice = MultiDeviceChoice.No,
+            SavePastResults = true,
+            Memory = MemoryChoice.SimpleFiles,
+            LookStyle = "Modern",
+            UiFramework = "WPF"
+        };
+        var doc = new SsotDocument
+        {
+            Data = { Storage = { Type = "LocalJson" } },
+            Ui = { Theme = "Default", Screens = { new ScreenInfo { Id = "main", Title = "Main" } } },
+            Architecture = { Pattern = "MVC" }
+        };
+
+        var recs = new RecommendationEngine().Evaluate(doc, answers);
+        Assert.Contains(recs, r => r.RuleId == "STORAGE-OFFLINE-STRUCTURED-001");
+        Assert.Contains(recs, r => r.RuleId == "ARCH-DESKTOP-MVVM-001");
+        Assert.Contains(recs, r => r.RuleId.StartsWith("UI-MODERN", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void BlueprintCompiler_WritesRequirementsAndDecisionModes()
+    {
+        var catalog = new SchemaCatalog();
+        catalog.LoadFromDirectory(SchemasDir);
+        var profile = catalog.RequireById("wpf_desktop");
+        var answers = new WizardAnswers
+        {
+            ProfileId = "wpf_desktop",
+            ProjectName = "Needs App",
+            Audience = "testers",
+            HelpsThem = "try gap questions",
+            Accounts = AccountsChoice.Separate,
+            MultiDevice = MultiDeviceChoice.Later,
+            Notifications = true,
+            NotificationNotes = "Remind about due items",
+            ArchitectureDecision = TechnicalDecisionMode.AgentDiscretion,
+            StorageDecision = TechnicalDecisionMode.Recommended,
+            SavePastResults = true,
+            Memory = MemoryChoice.SimpleFiles
+        };
+        answers.ComposeDescription();
+        new CompatibilityEngine().ApplySafeDefaults(answers, profile);
+
+        var doc = new BlueprintCompiler().BuildNew(answers, profile);
+        Assert.Equal("separate", doc.Requirements.Accounts);
+        Assert.Equal("later", doc.Requirements.MultiDevice);
+        Assert.True(doc.Requirements.Notifications);
+        Assert.Equal("agent_discretion", doc.Architecture.PatternDecision.Mode);
+        Assert.Equal("recommended", doc.Data.Storage.Decision.Mode);
+        Assert.Contains(doc.Ui.Screens.SelectMany(s => s.Controls), c => c.Id == "remindersHint");
+    }
+
+    [Fact]
+    public void AgentPackageExporter_WritesExpectedLayout()
+    {
+        var catalog = new SchemaCatalog();
+        catalog.LoadFromDirectory(SchemasDir);
+        var profile = catalog.RequireById("wpf_desktop");
+        var answers = new WizardAnswers
+        {
+            ProfileId = "wpf_desktop",
+            ProjectName = "Package Demo",
+            Description = "Demo for agent package export.",
+            SavePastResults = true,
+            Memory = MemoryChoice.SimpleFiles
+        };
+        new CompatibilityEngine().ApplySafeDefaults(answers, profile);
+        var doc = new BlueprintCompiler().BuildNew(answers, profile);
+
+        var root = Path.Combine(Path.GetTempPath(), "caa-agent-pkg-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var written = new AgentPackageExporter().Export(doc, root);
+            Assert.Contains(written, p => p.EndsWith("AGENTS.md", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(written, p => p.EndsWith("project.json", StringComparison.OrdinalIgnoreCase));
+            Assert.True(File.Exists(Path.Combine(root, "specifications", "requirements.md")));
+            Assert.True(Directory.Exists(Path.Combine(root, "tasks")));
+            Assert.Contains("agent_discretion", File.ReadAllText(Path.Combine(root, "AGENTS.md")), StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+                Directory.Delete(root, recursive: true);
+        }
     }
 }

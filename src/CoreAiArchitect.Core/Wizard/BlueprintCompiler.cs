@@ -25,6 +25,7 @@ public sealed class BlueprintCompiler
         }
 
         ApplyRememberScreens(doc, answers, profile);
+        EnsureNotificationHintOnMain(doc, profile, answers);
         DeriveEntitiesAndWorkflows(doc, profile);
         return SsotDocumentNormalizer.Normalize(doc);
     }
@@ -35,6 +36,7 @@ public sealed class BlueprintCompiler
         _compatibility.ApplySafeDefaults(answers, profile);
         ApplyShell(document, answers, profile);
         ApplyRememberScreens(document, answers, profile);
+        EnsureNotificationHintOnMain(document, profile, answers);
         DeriveEntitiesAndWorkflows(document, profile);
         return SsotDocumentNormalizer.Normalize(document);
     }
@@ -133,7 +135,38 @@ public sealed class BlueprintCompiler
         if (answers.IncludeSettingsScreen)
             lines.Add("The app includes a settings screen.");
 
+        lines.Add(DomainScaffoldPolicy.UserGuidanceHandOff + " " + DomainScaffoldPolicy.AgentInstruction);
+
         return string.Join(Environment.NewLine + Environment.NewLine, lines);
+    }
+
+    /// <summary>
+    /// When the user chose a blank template and listed capabilities in the ad-lib,
+    /// seed one button per feature on the empty main screen so Screens is not blank.
+    /// </summary>
+    public static int SeedAdLibFeatures(SsotDocument doc, WizardAnswers answers, FormSchemaDefinition profile)
+    {
+        var features = answers.GetFeatureLines();
+        if (features.Count == 0) return 0;
+
+        var main = doc.Ui.Screens.FirstOrDefault(s => s.Id.Equals("main", StringComparison.OrdinalIgnoreCase))
+                   ?? doc.Ui.Screens.FirstOrDefault();
+        if (main is null || main.Controls.Count > 0)
+            return 0;
+
+        var types = ResolveControlTypes(profile);
+        var index = 1;
+        foreach (var feature in features)
+        {
+            var button = CreateThing(BlueprintThingKind.Button, types, index);
+            button.Id = $"feature{index}";
+            button.Label = feature.Length > 48 ? feature[..45] + "…" : feature;
+            button.Action = "DoFeature";
+            main.Controls.Add(button);
+            index++;
+        }
+
+        return features.Count;
     }
 
     private void ApplyShell(SsotDocument doc, WizardAnswers answers, FormSchemaDefinition profile)
@@ -160,11 +193,56 @@ public sealed class BlueprintCompiler
             : navs[0];
 
         ApplyMemory(doc, answers, profile);
-        ApplyArchitecture(doc, profile);
+        ApplyRequirements(doc, answers);
+        ApplyArchitecture(doc, answers, profile);
         ApplyBuild(doc, profile);
         ApplyTesting(doc, answers);
         ApplyConstraints(doc, profile);
         ApplyDocumentation(doc);
+    }
+
+    private static void ApplyRequirements(SsotDocument doc, WizardAnswers answers)
+    {
+        doc.Requirements.Accounts = answers.Accounts switch
+        {
+            AccountsChoice.Separate => "separate",
+            AccountsChoice.Unsure => "unsure",
+            _ => "none"
+        };
+        doc.Requirements.MultiDevice = answers.MultiDevice switch
+        {
+            MultiDeviceChoice.Yes => "yes",
+            MultiDeviceChoice.Later => "later",
+            _ => "no"
+        };
+        doc.Requirements.Notifications = answers.Notifications;
+        doc.Requirements.NotificationNotes = answers.NotificationNotes?.Trim() ?? string.Empty;
+        doc.Requirements.Notes = new List<string>
+        {
+            $"Connectivity preference: {answers.ConnectivityLabel}."
+        };
+    }
+
+    /// <summary>Call after screens exist so notification UI contract can attach to Main.</summary>
+    private static void EnsureNotificationHintOnMain(SsotDocument doc, FormSchemaDefinition profile, WizardAnswers answers)
+    {
+        if (!answers.Notifications) return;
+
+        var main = doc.Ui.Screens.FirstOrDefault(s =>
+            !s.Id.Equals("history", StringComparison.OrdinalIgnoreCase)
+            && !s.Id.Equals("settings", StringComparison.OrdinalIgnoreCase));
+        if (main is null) return;
+        if (main.Controls.Any(c => c.Id.Equals("remindersHint", StringComparison.OrdinalIgnoreCase)))
+            return;
+
+        var types = ResolveControlTypes(profile);
+        main.Controls.Add(new ControlInfo
+        {
+            Id = "remindersHint",
+            Type = Pick(types, "TextBox", "Parameter", "Option", "Button"),
+            Label = "Reminders / notifications",
+            Action = "ConfigureNotifications"
+        });
     }
 
     private static void ApplyMemory(SsotDocument doc, WizardAnswers answers, FormSchemaDefinition profile)
@@ -199,6 +277,47 @@ public sealed class BlueprintCompiler
                 doc.Data.Storage.Type = PickStorage("None");
                 doc.Data.Storage.ConnectionStringMode = "None";
                 doc.Data.Storage.MigrationsRequired = false;
+                break;
+        }
+
+        ApplyStorageDecision(doc, answers);
+    }
+
+    private static void ApplyStorageDecision(SsotDocument doc, WizardAnswers answers)
+    {
+        var decision = doc.Data.Storage.Decision;
+        switch (answers.StorageDecision)
+        {
+            case TechnicalDecisionMode.AgentDiscretion:
+                decision.Mode = "agent_discretion";
+                decision.RuleId = "STORAGE-AGENT-DISCRETION";
+                decision.Rationale = "Author left persistence technology to the coding agent.";
+                decision.Guidance = new List<string>
+                {
+                    "maintainable",
+                    "testable",
+                    "appropriate_for_project_scale",
+                    answers.Connectivity == ConnectivityChoice.Offline ? "works_offline" : "respect_connectivity"
+                };
+                break;
+            case TechnicalDecisionMode.ChooseMyself:
+                decision.Mode = "specified";
+                decision.RuleId = string.Empty;
+                decision.Rationale = "Author chose the storage type explicitly.";
+                decision.Guidance = new List<string>();
+                break;
+            default:
+                if (string.IsNullOrWhiteSpace(decision.Mode) || decision.Mode == "specified")
+                {
+                    decision.Mode = "recommended";
+                    decision.RuleId = string.IsNullOrWhiteSpace(decision.RuleId)
+                        ? "STORAGE-PROFILE-DEFAULT"
+                        : decision.RuleId;
+                    decision.Rationale = string.IsNullOrWhiteSpace(decision.Rationale)
+                        ? "Storage chosen from wizard memory / profile defaults."
+                        : decision.Rationale;
+                    decision.Guidance = new List<string> { "maintainable", "testable", "appropriate_for_project_scale" };
+                }
                 break;
         }
     }
@@ -282,7 +401,8 @@ public sealed class BlueprintCompiler
             doc.Domain.Entities.Add(new EntityInfo
             {
                 Name = "OptionChoice",
-                Description = "A selectable option the user can pick.",
+                Description = DomainScaffoldPolicy.AnnotateEntityDescription(
+                    "A selectable option the user can pick"),
                 Fields =
                 {
                     new EntityFieldInfo { Name = "Id", Type = "string", Required = true },
@@ -297,7 +417,8 @@ public sealed class BlueprintCompiler
             doc.Domain.Entities.Add(new EntityInfo
             {
                 Name = "UserInput",
-                Description = "Values the user types on screen (counts, names, notes).",
+                Description = DomainScaffoldPolicy.AnnotateEntityDescription(
+                    "Values the user types on screen (counts, names, notes)"),
                 Fields =
                 {
                     new EntityFieldInfo { Name = "FieldName", Type = "string", Required = true },
@@ -311,7 +432,8 @@ public sealed class BlueprintCompiler
             doc.Domain.Entities.Add(new EntityInfo
             {
                 Name = "ResultItem",
-                Description = "A generated or listed result shown to the user.",
+                Description = DomainScaffoldPolicy.AnnotateEntityDescription(
+                    "A generated or listed result shown to the user"),
                 Fields =
                 {
                     new EntityFieldInfo { Name = "Id", Type = "Guid", Required = true },
@@ -326,7 +448,8 @@ public sealed class BlueprintCompiler
             doc.Domain.Entities.Add(new EntityInfo
             {
                 Name = "HistoryEntry",
-                Description = "A saved record from a previous run.",
+                Description = DomainScaffoldPolicy.AnnotateEntityDescription(
+                    "A saved record from a previous run"),
                 Fields =
                 {
                     new EntityFieldInfo { Name = "Id", Type = "Guid", Required = true },
@@ -341,7 +464,8 @@ public sealed class BlueprintCompiler
             doc.Domain.Entities.Add(new EntityInfo
             {
                 Name = "AppSettings",
-                Description = "User preferences for the application.",
+                Description = DomainScaffoldPolicy.AnnotateEntityDescription(
+                    "User preferences for the application"),
                 Fields =
                 {
                     new EntityFieldInfo { Name = "ThemePreference", Type = "string", Required = false },
@@ -355,7 +479,8 @@ public sealed class BlueprintCompiler
             doc.Domain.Entities.Add(new EntityInfo
             {
                 Name = "AppItem",
-                Description = "Primary information item for this app.",
+                Description = DomainScaffoldPolicy.AnnotateEntityDescription(
+                    "Primary information item for this app"),
                 Fields =
                 {
                     new EntityFieldInfo { Name = "Id", Type = "Guid", Required = true },
@@ -457,12 +582,19 @@ public sealed class BlueprintCompiler
         };
     }
 
-    private static void ApplyArchitecture(SsotDocument doc, FormSchemaDefinition profile)
+    private static void ApplyArchitecture(SsotDocument doc, WizardAnswers answers, FormSchemaDefinition profile)
     {
-        doc.Architecture.Pattern = profile.Sections
+        var defaultPattern = profile.Sections
             .SelectMany(s => s.Fields)
             .FirstOrDefault(f => f.Path.Equals("architecture.pattern", StringComparison.OrdinalIgnoreCase))
             ?.Values?.FirstOrDefault() ?? "MVVM";
+
+        if (answers.ArchitectureDecision != TechnicalDecisionMode.ChooseMyself
+            || string.IsNullOrWhiteSpace(doc.Architecture.Pattern))
+        {
+            doc.Architecture.Pattern = defaultPattern;
+        }
+
         doc.Architecture.Layers = new List<string> { "UI", "Application", "Domain", "Infrastructure" };
         doc.Architecture.Modules = new List<ModuleInfo>
         {
@@ -474,6 +606,37 @@ public sealed class BlueprintCompiler
                 Dependencies = new List<string> { "AppShell" }
             }
         };
+
+        var decision = doc.Architecture.PatternDecision;
+        switch (answers.ArchitectureDecision)
+        {
+            case TechnicalDecisionMode.AgentDiscretion:
+                decision.Mode = "agent_discretion";
+                decision.RuleId = "ARCH-AGENT-DISCRETION";
+                decision.Rationale = "Author left architectural pattern to the coding agent.";
+                decision.Guidance = new List<string>
+                {
+                    "maintainable",
+                    "testable",
+                    "appropriate_for_project_scale",
+                    "fit_ui_framework:" + answers.UiFramework
+                };
+                break;
+            case TechnicalDecisionMode.ChooseMyself:
+                decision.Mode = "specified";
+                decision.RuleId = string.Empty;
+                decision.Rationale = "Author chose the architecture pattern explicitly.";
+                decision.Guidance = new List<string>();
+                break;
+            default:
+                decision.Mode = "recommended";
+                decision.RuleId = string.IsNullOrWhiteSpace(decision.RuleId) ? "ARCH-PROFILE-DEFAULT" : decision.RuleId;
+                decision.Rationale = string.IsNullOrWhiteSpace(decision.Rationale)
+                    ? $"Recommended {doc.Architecture.Pattern} for {WizardAnswers.ProfileLabel(answers.ProfileId)}."
+                    : decision.Rationale;
+                decision.Guidance = new List<string> { "maintainable", "testable", "appropriate_for_project_scale" };
+                break;
+        }
     }
 
     private static void ApplyBuild(SsotDocument doc, FormSchemaDefinition profile)

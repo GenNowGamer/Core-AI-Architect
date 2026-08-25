@@ -11,10 +11,36 @@ public sealed class SsotDocument
     public List<WorkflowInfo> Workflows { get; set; } = new();
     public ConstraintsInfo Constraints { get; set; } = new();
     public DataInfo Data { get; set; } = new();
+    public RequirementsInfo Requirements { get; set; } = new();
     public BuildInfo Build { get; set; } = new();
     public DeploymentInfo Deployment { get; set; } = new();
     public TestingInfo Testing { get; set; } = new();
     public DocumentationInfo Documentation { get; set; } = new();
+}
+
+/// <summary>
+/// How a technical choice was made. <c>agent_discretion</c> means the coding agent should choose
+/// intentionally — distinct from leaving a field blank by accident.
+/// </summary>
+public sealed class DecisionInfo
+{
+    /// <summary>specified | recommended | agent_discretion</summary>
+    public string Mode { get; set; } = "specified";
+    public List<string> Guidance { get; set; } = new();
+    public string RuleId { get; set; } = string.Empty;
+    public string Rationale { get; set; } = string.Empty;
+}
+
+/// <summary>Human-language product requirements collected by gap questions (not UI storyboard).</summary>
+public sealed class RequirementsInfo
+{
+    /// <summary>none | separate | unsure</summary>
+    public string Accounts { get; set; } = "none";
+    /// <summary>no | yes | later</summary>
+    public string MultiDevice { get; set; } = "no";
+    public bool Notifications { get; set; }
+    public string NotificationNotes { get; set; } = string.Empty;
+    public List<string> Notes { get; set; } = new();
 }
 
 public sealed class ProjectInfo
@@ -37,6 +63,7 @@ public sealed class EnvironmentInfo
 public sealed class ArchitectureInfo
 {
     public string Pattern { get; set; } = string.Empty;
+    public DecisionInfo PatternDecision { get; set; } = new();
     public List<string> Layers { get; set; } = new();
     public List<ModuleInfo> Modules { get; set; } = new();
 }
@@ -124,6 +151,7 @@ public sealed class StorageInfo
     public string Type { get; set; } = "None";
     public string ConnectionStringMode { get; set; } = "None";
     public bool MigrationsRequired { get; set; }
+    public DecisionInfo Decision { get; set; } = new();
 }
 
 public sealed class BuildInfo

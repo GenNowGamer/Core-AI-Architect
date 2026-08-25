@@ -1,6 +1,6 @@
 # Session handoff — Core AI Architect
 
-**Last updated:** 2026-08-14  
+**Last updated:** 2026-08-25  
 **Workspace:** `d:\Robert\Desktop\App Project Builds\Core_AI_Architect`  
 **Product:** Core AI Architect (App Blueprint / SSOT authoring tool for AI coding agents)
 
@@ -8,7 +8,34 @@ Use this file for current-state / continuity context. Operator build/run basics 
 
 ---
 
-## What shipped this session (2026-08-14)
+## What shipped this session (2026-08-25)
+
+Product evolution: **Ad-Lib → Needs → storyboard → Blueprint hub**, plus deterministic recommendations, `agent_discretion`, and **Agent Package** export. Same `SsotDocument` / compiler core — no full rewrite.
+
+| Change | Detail |
+|---|---|
+| **Guided Ad-Lib** | Fill-in-the-blank intake (audience, helps-them, capabilities, connectivity, look) + optional product rules; composes `project.description`. Blank template seeds capability lines as buttons (`SeedAdLibFeatures`). |
+| **Needs step** | Accounts / multi-device / notifications → `requirements` + description summary; notifications can add a Main-screen UI hint. |
+| **Blueprint hub** | Completeness checklist (`BlueprintHubAssessor`), jump-to-section, Simple \| Standard \| Expert detail, tech summary / expert overrides. |
+| **Recommendations** | `RecommendationEngine` with rule IDs + Why? + Use (storage, MVVM, Fluent, backup/export, requirement conflicts). |
+| **Decision modes** | `architecture.patternDecision` and `data.storage.decision`: `specified` \| `recommended` \| `agent_discretion` (Expert UI). |
+| **Agent Package** | Folder export: `project.json`, `.ssot.json`, `AGENTS.md`, `specifications/`, `tasks/`, `assets/` (`AgentPackageExporter`). |
+| **Docs / help** | [USER_GUIDE.md](docs/USER_GUIDE.md), [SSOT_CONTRACT.md](docs/SSOT_CONTRACT.md), [README.md](README.md), in-app `HelpCatalog` updated for the new flow. |
+
+Primary new/updated code: `WizardAnswers.cs`, `BlueprintCompiler.cs`, `BlueprintHubAssessor.cs`, `RecommendationEngine.cs`, `AgentPackageExporter.cs`, `SsotDocument` (+ normalizer), `MainWindow.xaml` / `MainWindowViewModel.cs`, `DialogService` (folder pick), `SsotDocumentService`.
+
+### Verify
+
+```powershell
+dotnet build CoreAiArchitect.sln -c Release
+dotnet test  CoreAiArchitect.sln -c Release
+```
+
+Last check this session: build succeeded (0 warnings); **35** tests passed.
+
+---
+
+## What shipped previously (2026-08-14)
 
 Self-contained **Windows x64 exe** so Core AI Architect can be opened without `dotnet run`.
 
@@ -18,70 +45,49 @@ Self-contained **Windows x64 exe** so Core AI Architect can be opened without `d
 | **Output** | `src/CoreAiArchitect.App/bin/publish/win-x64/CoreAiArchitect.exe` (keep the whole folder; includes `schemas\`) |
 | **Desktop shortcut** | `%USERPROFILE%\Desktop\Core AI Architect.lnk` → that exe, working directory = publish folder |
 
-### Verify
-
 ```powershell
 dotnet publish src/CoreAiArchitect.App/CoreAiArchitect.App.csproj -c Release -p:PublishProfile=Win64-SelfContained
 ```
-
-Then double-click the Desktop shortcut or `CoreAiArchitect.exe` in the publish folder.
 
 ---
 
 ## What shipped previously (2026-07-24)
 
-Beginner-friendly **App Blueprint** redesign plus earlier bugfixes from the same chat.
-
-### Product redesign (5-step wizard)
+Beginner-friendly **App Blueprint** redesign (screen-first storyboard) plus earlier bugfixes.
 
 | Change | Detail |
 |---|---|
-| **5 steps** | Your idea → Screens → When they click → Remember stuff? → Hand off to AI |
-| **Screen-first** | Users design what people see/do; `BlueprintCompiler` derives entities/workflows |
-| **Add a thing** | Plain English: Choice list, Place to type, Button, Results list (no Add Button vs Add Control) |
-| **Templates** | Blank, Number/lottery picker, Simple form, List + save history (`BlueprintTemplates`) |
-| **Description tips** | Keyword hints from the product description |
-| **Remember** | History/Settings only when opted in (no silent feature-checkbox side effects) |
-| **Terminology** | User-facing **App Blueprint**; export still `*.ssot.json` / `SsotDocument` shape |
+| **Storyboard steps** | Screens → When they click → Remember (still core of the experience-first contract) |
+| **Add a thing** | Choice list, Place to type, Button, Results list |
+| **Templates** | Blank, Number/lottery picker, Simple form, List + save history |
+| **Terminology** | User-facing **App Blueprint**; export still `*.ssot.json` |
 
-Primary code: `MainWindow.xaml` / `MainWindowViewModel.cs`, `WizardAnswers.cs`, `BlueprintCompiler.cs`, `BlueprintTemplates.cs`, `SsotSmartBuilder.cs` (thin delegate), `FriendlyIssueMapper.cs`, `HelpCatalog.cs`.
-
-### Bugfixes (same session)
-
-| Fix | Detail |
-|---|---|
-| **Open wipe** | Opening a blueprint no longer clears Theme/Navigation via ComboBox `SelectionChanged` during list refresh |
-| **Menu contrast** | File/Help submenu text is dark on light popup (top-level stays white on teal) |
-| **Back→Next wipe** | Leaving Features no longer force-rebuilds an existing document (preserved in redesign: document kept once created) |
-
-### Verify
-
-```powershell
-dotnet build CoreAiArchitect.sln
-dotnet test  CoreAiArchitect.sln
-```
-
-Last check this session: build succeeded (0 warnings); **28** tests passed.
+Bugfixes from that session: Open wipe, menu contrast, Back→Next document preserve.
 
 ---
 
 ## Product shape (current)
 
-Plain-language **5-step wizard**. Technical defaults (OS, language, theme, navigation, architecture, build/test) are applied automatically from the form profile.
+**Wizard flow:** Ad-Lib → Needs → Screens → Clicks → Remember → Project Blueprint hub.
 
-Older section-editor / UI Layout Builder views remain in the project but are **not** the active MainWindow flow.
+- Novices stay in plain language; Expert detail exposes stack + decision modes.
+- Technical defaults (OS, language, theme, navigation, architecture, build/test) still come from the form profile + rules.
+- Older section-editor / UI Layout Builder views remain in the project but are **not** the active MainWindow flow.
 
 ---
 
 ## Architecture (quick)
 
 ```text
-schemas/*.json → CompatibilityEngine + BlueprintCompiler → SsotDocument
-                              → Validation / Hand-off check → JSON / Markdown export
+schemas/*.json
+    → CompatibilityEngine + RecommendationEngine + BlueprintCompiler
+    → SsotDocument (incl. requirements + decision objects)
+    → SsotReadinessEngine / BlueprintHubAssessor
+    → JSON | Markdown | Agent Package folder
 Core ← App (WPF wizard) + PowerShell module
 ```
 
-Templates seed screens; compiler derives `domain` / `workflows` from controls and button steps.
+Templates / Ad-Lib seed screens; compiler derives `domain` / `workflows` from controls and button steps. Domain scaffolds stay generic on purpose (`DomainScaffoldPolicy`).
 
 ---
 
@@ -112,7 +118,9 @@ File at repo root (user-authored, **not** a product sample):
 
 - `Core-Lottery-Generator.ssot.json`
 
-**Current review (2026-07-24):** Build-ready for the core loop. Main screen has game picker, ticket count, Generate, results list; Generate workflow steps match. Description lists IL games and allows agent to research/cache rules. History/Settings are present (Remember opted in). Domain entities remain generic (`OptionChoice` / `ResultItem`); agent should enrich ticket/game models. Settings Save workflow steps still look copy-pasted from Save History — fix in generated app or re-edit Clicks.
+**Review (2026-07-24; still valid for core loop):** Build-ready for the core loop. Main screen has game picker, ticket count, Generate, results list; Generate workflow steps match. Description lists IL games and allows agent to research/cache rules. History/Settings are present (Remember opted in). Domain entities remain generic (`OptionChoice` / `ResultItem`); agent should enrich ticket/game models. Settings Save workflow steps still look copy-pasted from Save History — fix in generated app or re-edit Clicks.
+
+**Note:** Re-open/re-export after this session if you want `requirements` / decision-mode fields populated by the new wizard (older JSON still loads; missing sections normalize to defaults).
 
 ### Litmus checklist (met for core)
 
@@ -129,15 +137,16 @@ File at repo root (user-authored, **not** a product sample):
 - MSIX project is **outside** `CoreAiArchitect.sln` so `dotnet build` stays portable; see `src/CoreAiArchitect.Package/README.md`.
 - Everyday launch path is the self-contained folder publish (`Win64-SelfContained`), not MSIX. Do not copy `CoreAiArchitect.exe` out of `bin/publish/win-x64` by itself.
 - Git repo is initialized in this workspace.
+- User-guide **PDF** may be missing or stale relative to [docs/USER_GUIDE.md](docs/USER_GUIDE.md) — regenerate when needed.
 
 ---
 
 ## Suggested next steps
 
-1. Optional: regenerate user-guide PDF from updated [docs/USER_GUIDE.md](docs/USER_GUIDE.md) (`python tools/GenerateUserGuidePdf.py`).
-2. Hand `Core-Lottery-Generator.ssot.json` + [SSOT_CONTRACT.md](docs/SSOT_CONTRACT.md) to an agent to generate the WPF lottery app.
-3. Install PowerShell 7 if module smoke-testing is needed on this machine.
-4. Optional: turn off History/Settings in Remember and re-export if a thinner lottery app is preferred.
+1. Regenerate user-guide PDF from [docs/USER_GUIDE.md](docs/USER_GUIDE.md) (`python tools/GenerateUserGuidePdf.py`).
+2. Re-publish self-contained exe if you want the Desktop shortcut to match this build.
+3. Optionally re-author lottery blueprint through Ad-Lib → Needs → hub, then export Agent Package for a coding agent.
+4. Install PowerShell 7 if module smoke-testing is needed on this machine.
 
 ---
 
@@ -149,5 +158,5 @@ File at repo root (user-authored, **not** a product sample):
 | [docs/Core_AI_Architect_User_Guide.pdf](docs/Core_AI_Architect_User_Guide.pdf) | End-user guide (PDF) — regenerate from USER_GUIDE.md after guide edits |
 | [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Markdown source for the user guide PDF |
 | [session_handoff.md](session_handoff.md) | This file — session continuity and open work |
-| [docs/SSOT_CONTRACT.md](docs/SSOT_CONTRACT.md) | Rules for agents consuming exported SSOT / App Blueprint JSON |
+| [docs/SSOT_CONTRACT.md](docs/SSOT_CONTRACT.md) | Rules for AI agents consuming exported SSOT / App Blueprint JSON / Agent Package |
 | [src/CoreAiArchitect.Package/README.md](src/CoreAiArchitect.Package/README.md) | MSIX / Visual Studio packaging only |

@@ -53,6 +53,9 @@ public static class BlueprintTemplates
         if (ContainsAny(text, "lottery", "lotto", "ticket", "powerball", "mega millions", "game"))
             tips.Add("This sounds like a number/lottery picker — try the “Number / lottery picker” template.");
 
+        if (ContainsAny(text, "rule", "ball", "fireball", "range", "cache", "illinois"))
+            tips.Add("Good — keep game rules and caching notes in this description; click steps should reference them.");
+
         if (ContainsAny(text, "generate", "create", "make numbers"))
             tips.Add("Add a Button named Generate and a Results list on the same screen.");
 

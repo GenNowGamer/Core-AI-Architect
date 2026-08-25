@@ -8,11 +8,12 @@ Markdown source for that guide: [docs/USER_GUIDE.md](docs/USER_GUIDE.md).
 
 ## What it does
 
-1. Pick an app type and describe what the app should do (optional starter **template**)
-2. Build **screens** with everyday things: choice list, place to type, button, results list
-3. Write plain-English steps for **when someone clicks** each button
-4. Optionally turn on History / Settings (**Remember**)
-5. **Hand off** — readiness check, then save/export **App Blueprint** JSON (and optional Markdown)
+1. Fill a **guided Ad-Lib** (who it’s for, what it helps them do, main capabilities) plus optional product rules / template
+2. Answer plain-language **Needs** (accounts, multi-device, notifications)
+3. Build **screens** with everyday things: choice list, place to type, button, results list
+4. Write plain-English steps for **when someone clicks** each button
+5. Optionally turn on History / Settings (**Remember**)
+6. Review the **Project Blueprint** hub (recommendations with Why?, Simple/Standard/Expert detail), then save/export **App Blueprint** JSON, Markdown, or a full **Agent Package** folder
 
 Technical defaults (theme, navigation, architecture, build targets) are filled automatically from the form profile. There are **no sample projects** in the product itself; templates only seed screens you can edit.
 
@@ -20,8 +21,8 @@ Technical defaults (theme, navigation, architecture, build targets) are filled a
 
 | Project | Role |
 |---|---|
-| `src/CoreAiArchitect.Core` | SSOT model, form schemas, `BlueprintCompiler`, validation, exporters |
-| `src/CoreAiArchitect.App` | WPF guided wizard |
+| `src/CoreAiArchitect.Core` | SSOT model, form schemas, `BlueprintCompiler`, recommendations, validation, JSON/Markdown/Agent Package exporters |
+| `src/CoreAiArchitect.App` | WPF guided wizard (Ad-Lib → Needs → Screens → Blueprint hub) |
 | `src/CoreAiArchitect.PowerShell` | PowerShell 7+ binary module |
 | `src/CoreAiArchitect.Package` | MSIX packaging (Visual Studio) |
 | `tests/CoreAiArchitect.Tests` | Core unit tests |
@@ -80,7 +81,9 @@ Located in `schemas/` (wizard surfaces the common ones; others remain available 
 
 ## Agent contract
 
-See [docs/SSOT_CONTRACT.md](docs/SSOT_CONTRACT.md) for how coding agents must interpret exported blueprint JSON (`*.ssot.json`).
+See [docs/SSOT_CONTRACT.md](docs/SSOT_CONTRACT.md) for how coding agents must interpret exported blueprint JSON (`*.ssot.json`), including **decision modes** (`agent_discretion`) and **requirements**.
+
+From the app you can also **Export Agent Package** — a folder with `AGENTS.md`, specifications, and phased tasks generated from the same SSOT.
 
 ## Stack
 
