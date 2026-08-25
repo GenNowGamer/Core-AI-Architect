@@ -4,6 +4,7 @@ public interface IDialogService
 {
     string? OpenFile(string filter, string title = "Open");
     string? SaveFile(string filter, string title = "Save", string? defaultFileName = null);
+    string? PickFolder(string title = "Select folder");
     void ShowMessage(string message, string title = "Core AI Architect");
     void ShowMessage(string message, string title, bool isError);
     bool Confirm(string message, string title = "Confirm");
@@ -33,6 +34,16 @@ public sealed class DialogService : IDialogService
             AddExtension = true
         };
         return dialog.ShowDialog() == true ? dialog.FileName : null;
+    }
+
+    public string? PickFolder(string title = "Select folder")
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = title,
+            Multiselect = false
+        };
+        return dialog.ShowDialog() == true ? dialog.FolderName : null;
     }
 
     public void ShowMessage(string message, string title = "Core AI Architect") =>

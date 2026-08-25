@@ -15,6 +15,8 @@ public static class SsotDocumentNormalizer
 
         document.Environment ??= new EnvironmentInfo();
         document.Architecture ??= new ArchitectureInfo();
+        document.Architecture.PatternDecision ??= new DecisionInfo();
+        document.Architecture.PatternDecision.Guidance ??= new List<string>();
         document.Architecture.Layers ??= new List<string>();
         document.Architecture.Modules ??= new List<ModuleInfo>();
         foreach (var module in document.Architecture.Modules)
@@ -49,6 +51,11 @@ public static class SsotDocumentNormalizer
 
         document.Data ??= new DataInfo();
         document.Data.Storage ??= new StorageInfo();
+        document.Data.Storage.Decision ??= new DecisionInfo();
+        document.Data.Storage.Decision.Guidance ??= new List<string>();
+
+        document.Requirements ??= new RequirementsInfo();
+        document.Requirements.Notes ??= new List<string>();
 
         document.Build ??= new BuildInfo();
         document.Build.Configuration ??= new List<string>();

@@ -3,12 +3,14 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:conv="clr-namespace:CoreAiArchitect.App.Converters"
         Title="{Binding WindowTitle}"
-        Height="760" Width="1180"
-        MinHeight="600" MinWidth="960"
+        Height="800" Width="1180"
+        MinHeight="640" MinWidth="960"
         WindowStartupLocation="CenterScreen">
   <Window.Resources>
     <conv:WizardStepVisibilityConverter x:Key="StepVis"/>
     <conv:BoolToVisibilityConverter x:Key="BoolVis"/>
+    <conv:DetailLevelVisibilityConverter x:Key="DetailVis"/>
+    <conv:HubStatusBrushConverter x:Key="HubStatusBrush"/>
   </Window.Resources>
 
   <DockPanel>
@@ -20,6 +22,7 @@
         <MenuItem Header="Save _As..." Command="{Binding SaveDocumentAsCommand}"/>
         <Separator/>
         <MenuItem Header="Export for _AI agent..." Command="{Binding ExportJsonCommand}"/>
+        <MenuItem Header="Export _Agent Package..." Command="{Binding ExportAgentPackageCommand}"/>
         <MenuItem Header="Export _Markdown..." Command="{Binding ExportMarkdownCommand}"/>
         <Separator/>
         <MenuItem Header="E_xit" Click="Exit_Click"/>
@@ -33,16 +36,17 @@
       <Grid>
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="*"/>
-          <ColumnDefinition Width="280"/>
+          <ColumnDefinition Width="320"/>
         </Grid.ColumnDefinitions>
         <StackPanel>
           <TextBlock Text="Core AI Architect" FontFamily="{StaticResource DisplayFont}"
                      FontSize="28" FontWeight="SemiBold" Foreground="White"/>
-          <TextBlock Text="Describe what people see and do — we’ll turn it into an App Blueprint for an AI builder."
+          <TextBlock Text="Describe what you want — we turn it into a validated App Blueprint for an AI coding agent."
                      Foreground="#F7EDE8" Margin="0,4,0,0" TextWrapping="Wrap"/>
         </StackPanel>
         <StackPanel Grid.Column="1" VerticalAlignment="Center">
-          <TextBlock Text="{Binding ProgressText}" Foreground="White" HorizontalAlignment="Right" Margin="0,0,0,6"/>
+          <TextBlock Text="{Binding ProgressText}" Foreground="White" HorizontalAlignment="Right" Margin="0,0,0,6"
+                     TextWrapping="Wrap" TextAlignment="Right"/>
           <ProgressBar Height="8" Minimum="0" Maximum="1" Value="{Binding ProgressValue}"
                        Foreground="{StaticResource CoralBrush}" Background="#66FFFFFF"/>
         </StackPanel>
@@ -72,7 +76,7 @@
 
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
           <Grid>
-            <!-- Your idea -->
+            <!-- Ad-Lib (Your idea) -->
             <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource StepVis}, ConverterParameter=YourIdea}">
               <TextBlock Style="{StaticResource FieldLabel}" Text="What kind of app?"/>
               <ItemsControl ItemsSource="{Binding AppKinds}" Margin="0,0,0,16">
@@ -108,11 +112,65 @@
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
 
-              <TextBlock Style="{StaticResource FieldLabel}" Text="App name"/>
-              <TextBox Text="{Binding Answers.ProjectName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,14"/>
-              <TextBlock Style="{StaticResource FieldLabel}" Text="What should it do? (short description)"/>
-              <TextBox Text="{Binding Answers.Description, UpdateSourceTrigger=PropertyChanged}"
-                       AcceptsReturn="True" TextWrapping="Wrap" MinHeight="90" Margin="0,0,0,8"
+              <Border Background="#FFFCF8" BorderBrush="#E2D8C8" BorderThickness="1" CornerRadius="10" Padding="18" Margin="0,0,0,16">
+                <StackPanel>
+                  <TextBlock Text="Guided Ad-Lib" FontWeight="SemiBold" FontSize="16" Foreground="{StaticResource TealBrush}" Margin="0,0,0,12"/>
+
+                  <WrapPanel Margin="0,0,0,10">
+                    <TextBlock Text="I'm building an app called " VerticalAlignment="Center" FontSize="15"/>
+                    <TextBox Text="{Binding Answers.ProjectName, UpdateSourceTrigger=PropertyChanged}"
+                             Width="220" Margin="4,0,4,0" FontSize="15"/>
+                    <TextBlock Text="." VerticalAlignment="Center" FontSize="15"/>
+                  </WrapPanel>
+
+                  <WrapPanel Margin="0,0,0,10">
+                    <TextBlock Text="It's mainly for " VerticalAlignment="Center" FontSize="15"/>
+                    <TextBox Text="{Binding Answers.Audience, UpdateSourceTrigger=PropertyChanged}"
+                             Width="320" Margin="4,0,4,0" FontSize="15"
+                             ToolTip="e.g. PC gamers, small shop owners, me"/>
+                    <TextBlock Text="." VerticalAlignment="Center" FontSize="15"/>
+                  </WrapPanel>
+
+                  <StackPanel Margin="0,0,0,10">
+                    <TextBlock Text="It will help them…" FontSize="15" Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding Answers.HelpsThem, UpdateSourceTrigger=PropertyChanged}"
+                             TextWrapping="Wrap" MinHeight="44" FontSize="15"
+                             ToolTip="e.g. manage and back up game save files"/>
+                  </StackPanel>
+
+                  <StackPanel Margin="0,0,0,12">
+                    <TextBlock Text="The main things users should be able to do are:" FontSize="15" Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding Answers.FeatureListText, UpdateSourceTrigger=PropertyChanged}"
+                             AcceptsReturn="True" TextWrapping="Wrap" MinHeight="72" FontSize="14"
+                             ToolTip="One capability per line. On a blank template these become starter buttons."/>
+                    <TextBlock Text="One per line — on a blank start these become buttons on your first screen."
+                               Foreground="#888" FontSize="12" Margin="0,4,0,0"/>
+                  </StackPanel>
+
+                  <Grid Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*"/>
+                      <ColumnDefinition Width="16"/>
+                      <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                      <TextBlock Text="My app will mainly be used…" FontSize="14" Margin="0,0,0,4"/>
+                      <ComboBox ItemsSource="{Binding ConnectivityOptions}"
+                                SelectedItem="{Binding SelectedConnectivityLabel}" FontSize="14"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                      <TextBlock Text="The interface should feel…" FontSize="14" Margin="0,0,0,4"/>
+                      <ComboBox ItemsSource="{Binding LookStyleOptions}"
+                                SelectedItem="{Binding Answers.LookStyle}" FontSize="14"/>
+                    </StackPanel>
+                  </Grid>
+                </StackPanel>
+              </Border>
+
+              <TextBlock Style="{StaticResource FieldLabel}" Text="Product rules (optional but powerful)"/>
+              <TextBlock Text="{Binding DescriptionGuidance}" TextWrapping="Wrap" Foreground="#666" Margin="0,0,0,6"/>
+              <TextBox Text="{Binding Answers.ProductRules, UpdateSourceTrigger=PropertyChanged}"
+                       AcceptsReturn="True" TextWrapping="Wrap" MinHeight="80" Margin="0,0,0,8"
                        LostFocus="Description_OnLostFocus"/>
               <Button Content="Get tips from my description" Command="{Binding RefreshTipsCommand}"
                       Style="{StaticResource GhostButton}" HorizontalAlignment="Left" Margin="0,0,0,10" Padding="12,6"/>
@@ -151,6 +209,28 @@
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
+            </StackPanel>
+
+            <!-- What you need (gap questions) -->
+            <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource StepVis}, ConverterParameter=WhatYouNeed}">
+              <TextBlock Style="{StaticResource FieldLabel}" Text="Will different people have their own accounts?"/>
+              <ComboBox ItemsSource="{Binding AccountsOptions}" SelectedItem="{Binding SelectedAccountsLabel}"
+                        Margin="0,0,0,6" FontSize="14"/>
+              <TextBlock Text="{Binding AccountsHelp}" TextWrapping="Wrap" Foreground="#666" Margin="0,0,0,16" FontSize="12"/>
+
+              <TextBlock Style="{StaticResource FieldLabel}" Text="Should information follow the user between devices?"/>
+              <ComboBox ItemsSource="{Binding MultiDeviceOptions}" SelectedItem="{Binding SelectedMultiDeviceLabel}"
+                        Margin="0,0,0,16" FontSize="14"/>
+
+              <CheckBox Content="Should your app remind or notify users about anything?"
+                        IsChecked="{Binding Notifications}" Margin="0,0,0,10" FontSize="15"/>
+              <StackPanel Visibility="{Binding ShowNotificationNotes, Converter={StaticResource BoolVis}}" Margin="0,0,0,8">
+                <TextBlock Style="{StaticResource FieldLabel}" Text="What should it remind them about?"/>
+                <TextBox Text="{Binding Answers.NotificationNotes, UpdateSourceTrigger=PropertyChanged}"
+                         AcceptsReturn="True" TextWrapping="Wrap" MinHeight="60"/>
+              </StackPanel>
+              <TextBlock TextWrapping="Wrap" Foreground="#666"
+                         Text="These answers update your blueprint requirements and description. Technical stack choices stay on Recommended unless you change them later in Expert detail."/>
             </StackPanel>
 
             <!-- Screens -->
@@ -244,8 +324,7 @@
               </DockPanel>
               <StackPanel Grid.Column="1" Margin="16,0,0,0">
                 <TextBlock Style="{StaticResource FieldLabel}" Text="What happens when someone uses this button?"/>
-                <TextBlock TextWrapping="Wrap" Foreground="#666" Margin="0,0,0,8"
-                           Text="Write one step per line, in everyday language. Example: Read the selected game → Create that many tickets → Show them in the results list"/>
+                <TextBlock Text="{Binding ClicksGuidance}" TextWrapping="Wrap" Foreground="#666" Margin="0,0,0,8"/>
                 <TextBox Text="{Binding SelectedClickFlow.StepsText, UpdateSourceTrigger=PropertyChanged}"
                          AcceptsReturn="True" TextWrapping="Wrap" MinHeight="160"
                          VerticalScrollBarVisibility="Auto"/>
@@ -262,27 +341,156 @@
                          Text="Leave both off for a simple app. You can always change this later — History and Settings only appear when you turn them on."/>
             </StackPanel>
 
-            <!-- Hand off -->
-            <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource StepVis}, ConverterParameter=HandOff}">
-              <TextBlock Text="Your app story" FontWeight="SemiBold" Margin="0,0,0,8"/>
-              <TextBox Text="{Binding AppStory}" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True"
-                       MinHeight="140" Margin="0,0,0,16" Background="#FFFCF8"/>
-              <TextBlock Text="{Binding ReadySummary}" TextWrapping="Wrap" Margin="0,0,0,12" FontSize="14"/>
-              <ItemsControl ItemsSource="{Binding ReadyMessages}" Margin="0,0,0,16">
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate>
-                    <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,0,0,6" Foreground="{StaticResource CoralBrush}"/>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-              <StackPanel Orientation="Horizontal">
-                <Button Content="Check again" Command="{Binding RunReadyCheckCommand}" Style="{StaticResource GhostButton}" Margin="0,0,10,0"/>
-                <Button Content="Save App Blueprint" Command="{Binding SaveDocumentCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,10,0"
-                        IsEnabled="{Binding IsReadyToExport}"/>
-                <Button Content="Export for AI agent" Command="{Binding ExportJsonCommand}" Style="{StaticResource PrimaryButton}"
-                        IsEnabled="{Binding IsReadyToExport}"/>
+            <!-- Blueprint hub -->
+            <Grid Visibility="{Binding CurrentStep, Converter={StaticResource StepVis}, ConverterParameter=HandOff}">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="280"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="*"/>
+              </Grid.ColumnDefinitions>
+
+              <Border Background="#FFFCF8" BorderBrush="#E2D8C8" BorderThickness="1" CornerRadius="10" Padding="14">
+                <DockPanel>
+                  <StackPanel DockPanel.Dock="Top" Margin="0,0,0,12">
+                    <TextBlock Text="{Binding HubProgressCaption}" TextWrapping="Wrap" FontWeight="SemiBold"
+                               Foreground="{StaticResource TealBrush}"/>
+                    <ProgressBar Height="8" Minimum="0" Maximum="100" Value="{Binding HubReadyPercent}" Margin="0,8,0,0"
+                                 Foreground="{StaticResource CoralBrush}" Background="#E8DFD0"/>
+                    <TextBlock Margin="0,10,0,4" FontSize="13" Text="Detail level"/>
+                    <ComboBox ItemsSource="{Binding DetailLevelOptions}"
+                              SelectedItem="{Binding SelectedDetailLevelLabel}"/>
+                    <TextBlock TextWrapping="Wrap" Foreground="#888" FontSize="11" Margin="0,6,0,0"
+                               Text="Simple hides tech details. Standard shows the stack. Expert lets you edit theme and navigation."/>
+                  </StackPanel>
+                  <TextBlock DockPanel.Dock="Top" Text="Sections" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                  <ListBox ItemsSource="{Binding HubSections}" SelectedItem="{Binding SelectedHubSection}"
+                           BorderThickness="0" Background="Transparent"
+                           MouseDoubleClick="HubSection_OnDoubleClick">
+                    <ListBox.ItemTemplate>
+                      <DataTemplate>
+                        <StackPanel Margin="0,0,0,10">
+                          <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding StatusGlyph}" FontWeight="Bold" Margin="0,0,8,0"
+                                       Foreground="{Binding Status, Converter={StaticResource HubStatusBrush}}"/>
+                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold"/>
+                          </StackPanel>
+                          <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" Foreground="#555" FontSize="12" Margin="18,2,0,0"/>
+                        </StackPanel>
+                      </DataTemplate>
+                    </ListBox.ItemTemplate>
+                  </ListBox>
+                </DockPanel>
+              </Border>
+
+              <StackPanel Grid.Column="2">
+                <TextBlock Text="Your app story" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                <TextBox Text="{Binding AppStory}" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True"
+                         MinHeight="120" Margin="0,0,0,12" Background="#FFFCF8"
+                         VerticalScrollBarVisibility="Auto"/>
+
+                <StackPanel Visibility="{Binding ShowStandardDetails, Converter={StaticResource BoolVis}}" Margin="0,0,0,12">
+                  <TextBlock Text="Technology summary" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                  <TextBox Text="{Binding TechSummary}" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True"
+                           MinHeight="90" Background="#F7F4EE" FontFamily="Consolas"/>
+                </StackPanel>
+
+                <StackPanel Visibility="{Binding ShowExpertDetails, Converter={StaticResource BoolVis}}" Margin="0,0,0,12">
+                  <TextBlock Text="Expert overrides" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*"/>
+                      <ColumnDefinition Width="12"/>
+                      <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                      <RowDefinition Height="Auto"/>
+                      <RowDefinition Height="Auto"/>
+                      <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,0,10">
+                      <TextBlock Style="{StaticResource FieldLabel}" Text="Theme"/>
+                      <ComboBox ItemsSource="{Binding ThemeOptions}" SelectedItem="{Binding Answers.Theme}"/>
+                    </StackPanel>
+                    <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,0,10">
+                      <TextBlock Style="{StaticResource FieldLabel}" Text="Navigation"/>
+                      <ComboBox ItemsSource="{Binding NavigationOptions}" SelectedItem="{Binding Answers.NavigationPattern}"/>
+                    </StackPanel>
+                    <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,0,10">
+                      <TextBlock Style="{StaticResource FieldLabel}" Text="UI framework"/>
+                      <TextBox Text="{Binding Answers.UiFramework, UpdateSourceTrigger=PropertyChanged}"/>
+                    </StackPanel>
+                    <StackPanel Grid.Row="1" Grid.Column="2" Margin="0,0,0,10">
+                      <TextBlock Style="{StaticResource FieldLabel}" Text="Language"/>
+                      <TextBox Text="{Binding Answers.Language, UpdateSourceTrigger=PropertyChanged}"/>
+                    </StackPanel>
+                    <StackPanel Grid.Row="2" Grid.Column="0">
+                      <TextBlock Style="{StaticResource FieldLabel}" Text="Architecture decision"/>
+                      <ComboBox ItemsSource="{Binding DecisionModeOptions}" SelectedItem="{Binding SelectedArchitectureDecisionLabel}"/>
+                    </StackPanel>
+                    <StackPanel Grid.Row="2" Grid.Column="2">
+                      <TextBlock Style="{StaticResource FieldLabel}" Text="Storage decision"/>
+                      <ComboBox ItemsSource="{Binding DecisionModeOptions}" SelectedItem="{Binding SelectedStorageDecisionLabel}"/>
+                    </StackPanel>
+                  </Grid>
+                </StackPanel>
+
+                <StackPanel Margin="0,0,0,12">
+                  <TextBlock Text="Recommendations" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                  <TextBlock Text="Deterministic suggestions with a Why? — not AI. Use Detail level Standard/Expert for tech summary and overrides."
+                             TextWrapping="Wrap" Foreground="#888" FontSize="11" Margin="0,0,0,8"/>
+                  <ItemsControl ItemsSource="{Binding Recommendations}" Margin="0,0,0,8">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <Border BorderBrush="#E2D8C8" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,8" Background="White">
+                          <DockPanel>
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+                              <Button Content="Why?" Command="{Binding DataContext.ExplainRecommendationCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                      CommandParameter="{Binding}" Style="{StaticResource GhostButton}" Padding="10,4" Margin="0,0,6,0"/>
+                              <Button Content="Use" Command="{Binding DataContext.ApplyRecommendationCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                      CommandParameter="{Binding}" Style="{StaticResource SecondaryButton}" Padding="10,4"
+                                      IsEnabled="{Binding CanApply}"/>
+                            </StackPanel>
+                            <StackPanel>
+                              <TextBlock FontWeight="SemiBold">
+                                <Run Text="{Binding Title, Mode=OneWay}"/>
+                                <Run Text="  "/>
+                                <Run Text="{Binding SuggestedValue, Mode=OneWay}" Foreground="#0F3D3E"/>
+                              </TextBlock>
+                              <TextBlock Text="{Binding Category}" Foreground="#888" FontSize="11"/>
+                              <TextBlock Text="{Binding Why}" TextWrapping="Wrap" Foreground="#555" Margin="0,4,0,0" FontSize="12"/>
+                              <TextBlock Foreground="#888" FontSize="11" Margin="0,4,0,0"
+                                         Text="{Binding RuleId, StringFormat=Rule: {0}}"/>
+                            </StackPanel>
+                          </DockPanel>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+
+                <TextBlock Text="{Binding HandOffGuidance}" TextWrapping="Wrap" Foreground="#666" Margin="0,0,0,12"/>
+                <TextBlock Text="{Binding ReadySummary}" TextWrapping="Wrap" Margin="0,0,0,8" FontSize="14"/>
+                <ItemsControl ItemsSource="{Binding ReadyMessages}" Margin="0,0,0,16">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,0,0,6" Foreground="{StaticResource CoralBrush}"/>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <WrapPanel>
+                  <Button Content="Check again" Command="{Binding RunReadyCheckCommand}" Style="{StaticResource GhostButton}" Margin="0,0,10,8"/>
+                  <Button Content="Edit selected section" Command="{Binding JumpToHubSectionCommand}"
+                          CommandParameter="{Binding SelectedHubSection}"
+                          Style="{StaticResource GhostButton}" Margin="0,0,10,8"/>
+                  <Button Content="Save App Blueprint" Command="{Binding SaveDocumentCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,10,8"
+                          IsEnabled="{Binding IsReadyToExport}"/>
+                  <Button Content="Export for AI agent" Command="{Binding ExportJsonCommand}" Style="{StaticResource PrimaryButton}" Margin="0,0,10,8"
+                          IsEnabled="{Binding IsReadyToExport}"/>
+                  <Button Content="Export Agent Package" Command="{Binding ExportAgentPackageCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,0,8"
+                          IsEnabled="{Binding IsReadyToExport}"/>
+                </WrapPanel>
               </StackPanel>
-            </StackPanel>
+            </Grid>
           </Grid>
         </ScrollViewer>
       </DockPanel>

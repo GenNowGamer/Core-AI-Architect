@@ -111,7 +111,7 @@
     "entities": [
       {
         "name": "OptionChoice",
-        "description": "A selectable option the user can pick.",
+        "description": "A selectable option the user can pick \u2014 Scaffold only. Treat ui.screens as the UI contract. Invent a richer domain model from project.description and workflows[].steps (game rules, tickets, numbers, validation, etc.). Do not stop at OptionChoice/UserInput/ResultItem if the description implies a fuller model.",
         "fields": [
           {
             "name": "Id",
@@ -132,7 +132,7 @@
       },
       {
         "name": "UserInput",
-        "description": "Values the user types on screen (counts, names, notes).",
+        "description": "Values the user types on screen (counts, names, notes) \u2014 Scaffold only. Treat ui.screens as the UI contract. Invent a richer domain model from project.description and workflows[].steps (game rules, tickets, numbers, validation, etc.). Do not stop at OptionChoice/UserInput/ResultItem if the description implies a fuller model.",
         "fields": [
           {
             "name": "FieldName",
@@ -148,7 +148,7 @@
       },
       {
         "name": "ResultItem",
-        "description": "A generated or listed result shown to the user.",
+        "description": "A generated or listed result shown to the user \u2014 Scaffold only. Treat ui.screens as the UI contract. Invent a richer domain model from project.description and workflows[].steps (game rules, tickets, numbers, validation, etc.). Do not stop at OptionChoice/UserInput/ResultItem if the description implies a fuller model.",
         "fields": [
           {
             "name": "Id",
@@ -169,7 +169,7 @@
       },
       {
         "name": "HistoryEntry",
-        "description": "A saved record from a previous run.",
+        "description": "A saved record from a previous run \u2014 Scaffold only. Treat ui.screens as the UI contract. Invent a richer domain model from project.description and workflows[].steps (game rules, tickets, numbers, validation, etc.). Do not stop at OptionChoice/UserInput/ResultItem if the description implies a fuller model.",
         "fields": [
           {
             "name": "Id",
@@ -190,7 +190,7 @@
       },
       {
         "name": "AppSettings",
-        "description": "User preferences for the application.",
+        "description": "User preferences for the application \u2014 Scaffold only. Treat ui.screens as the UI contract. Invent a richer domain model from project.description and workflows[].steps (game rules, tickets, numbers, validation, etc.). Do not stop at OptionChoice/UserInput/ResultItem if the description implies a fuller model.",
         "fields": [
           {
             "name": "ThemePreference",

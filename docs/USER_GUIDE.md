@@ -22,26 +22,27 @@ It helps you **describe what people see and do**. It compiles that into a struct
 
 | This tool does | This tool does not |
 |---|---|
-| Guide you through a plain-language wizard | Compile or publish the target app |
+| Guide you through a plain-language Ad-Lib, Needs, and screen storyboard | Compile or publish the target app |
 | Let you design screens with everyday “things” | Require you to manage themes, domain entities, or build RIDs by hand |
-| Validate readiness and export JSON + Markdown | Invent screens if you left them empty |
+| Check readiness, show recommendations (with Why?), and export JSON / Markdown / Agent Package | Invent screens if you left them empty |
 | | Replace Visual Studio / your coding agent |
 
-**Important:** Empty lists (screens, entities, workflows, modules, etc.) in the JSON mean “intentionally blank.” A careful agent should **not** invent those for you. Fill Screens and Clicks for anything you want built.
+**Important:** Empty lists (screens, entities, workflows, modules, etc.) in the JSON mean “intentionally blank.” A careful agent should **not** invent those for you. Fill Screens and Clicks for anything you want built. That is different from `agent_discretion` on architecture/storage, which means the agent **should** choose intentionally (see [SSOT_CONTRACT.md](SSOT_CONTRACT.md)).
 
 ---
 
-## 2. Typical workflow (5 steps)
+## 2. Typical workflow
 
 1. **File → New app blueprint** (or start from the first wizard step).
-2. **Your idea** — pick app type (Windows desktop / Website·API / Something else), name it, describe what it should do. Optionally start from a **template** (e.g. Number / lottery picker). Use **Get tips from my description** if offered.
-3. **Screens** — add screens; on each screen **Add a thing**: Choice list, Place to type, Button, or Results list. Rename labels to match your app.
-4. **When they click** — for each button, write plain-English steps (one per line).
-5. **Remember stuff?** — optionally turn on History and/or Settings (off by default for simple apps).
-6. **Hand off to AI** — read the app story, **Check again**, then **Save App Blueprint** / **Export for AI agent**.
-7. Hand the `.ssot.json` (plus [SSOT_CONTRACT.md](SSOT_CONTRACT.md)) to your coding agent.
+2. **Ad-Lib** — pick app type, fill in the blanks (name, who it’s for, what it helps them do, main capabilities, online/offline, look). Optionally add **product rules** and a **template**. On a blank start, listed capabilities become starter buttons.
+3. **Needs** — accounts, multi-device sync, and notifications (plain language; “I’m not sure” is allowed).
+4. **Screens** — add screens; on each screen **Add a thing**: Choice list, Place to type, Button, or Results list. Rename labels to match your app.
+5. **When they click** — for each button, write plain-English steps (one per line).
+6. **Remember stuff?** — optionally turn on History and/or Settings (off by default for simple apps).
+7. **Project Blueprint** — review recommendations (with **Why?**), completeness, and detail level (Simple / Standard / Expert), **Check again**, then **Save** / **Export for AI agent** / **Export Agent Package**.
+8. Hand the `.ssot.json` or Agent Package folder (plus [SSOT_CONTRACT.md](SSOT_CONTRACT.md)) to your coding agent.
 
-Theme, navigation, architecture, storage details, and build targets are filled automatically unless you change them by editing the JSON later.
+Theme, navigation, architecture, storage details, and build targets are filled automatically unless you change them in Expert detail or by editing the JSON later. Expert detail also lets you set architecture/storage to **Recommended**, **Let coding agent decide** (`agent_discretion`), or **Choose myself**.
 
 ### App types (wizard cards)
 
@@ -59,18 +60,19 @@ Additional profiles (`cli_tool`, `powershell_module`, etc.) remain available via
 
 | Menu | Action | Purpose |
 |---|---|---|
-| File → New app blueprint | Start fresh | Clears the wizard; begins at Your idea |
+| File → New app blueprint | Start fresh | Clears the wizard; begins at Ad-Lib |
 | File → Open | Open an existing App Blueprint | Continue editing (usually lands on Screens) |
 | File → Save / Save As | Persist the blueprint | Working `.ssot.json` file |
 | File → Export for AI agent | Write blueprint JSON | Handoff file for agents |
+| File → Export Agent Package | Write a folder for coding agents | `project.json`, `AGENTS.md`, specs, tasks |
 | File → Export Markdown | Write human-readable docs | Overview from filled sections |
-| Help → How this works | Short orientation | Five-step overview |
+| Help → How this works | Short orientation | Ad-Lib → Blueprint hub overview |
 
 ---
 
 ## 4. What ends up in the exported JSON
 
-The sections below describe the **exported App Blueprint** shape. In the wizard you mostly edit **Your idea**, **Screens**, **Clicks**, and **Remember**; the compiler fills domain entities, workflows, architecture, build, and related fields for you.
+The sections below describe the **exported App Blueprint** shape. In the wizard you mostly edit **Ad-Lib**, **Needs**, **Screens**, **Clicks**, and **Remember**; the compiler fills domain entities, workflows, architecture, build, and related fields for you. The **Project Blueprint** hub shows completeness, recommendations, and (at Standard/Expert detail) the technology summary and decision-mode overrides.
 
 ---
 
@@ -109,9 +111,12 @@ The sections below describe the **exported App Blueprint** shape. In the wizard 
 
 | Option | Required? | What it means | Effect on the built app |
 |---|---|---|---|
-| **Pattern** | Yes | Overall design style (MVVM, MVC, Clean Architecture, …) | Folder layout, ViewModels vs controllers, dependency direction |
+| **Pattern** | Yes* | Overall design style (MVVM, MVC, Clean Architecture, …) | Folder layout, ViewModels vs controllers, dependency direction |
+| **Pattern decision** | No | `specified` / `recommended` / `agent_discretion` | How strongly the agent must keep that pattern (Expert detail) |
 | **Layers** | No | Named layers as a string list, e.g. `UI`, `Domain`, `Infrastructure` | Instructs the agent to keep those layers separate |
 | **Modules** (Add Item) | No | Feature areas of the product | Splits the solution into logical modules |
+
+\*If pattern decision is `agent_discretion`, the agent chooses a pattern that fits `guidance` and the rest of the blueprint.
 
 **Each module item:**
 
@@ -194,7 +199,7 @@ Rename the **Name people will see** so labels match your product. Internal ids a
 | **Type** | `string`, `int`, `bool`, `decimal`, `DateTime`, `Guid` | Property / column type |
 | **Required** | Must have a value | Validation / non-nullability |
 
-**Tip:** Encode product rules in Description and Clicks when possible; add richer entities if the agent needs structured game/ticket rules.
+**Tip:** Encode product rules in Description and Clicks when possible. Exported domain entities are often **scaffolds** — coding agents should invent richer types from that prose (see [SSOT_CONTRACT.md](SSOT_CONTRACT.md)).
 
 ---
 
@@ -237,23 +242,41 @@ In the wizard this is **When they click** — pick a button by label and edit st
 
 ---
 
-### 4.8 Data
+### 4.8 Requirements (Needs step)
 
-**What it contributes:** How (and if) the app persists data. Driven largely by **Remember** (Save past results → LocalJson).
+**What it contributes:** Human-language product needs from the **Needs** wizard step (not the screen storyboard).
 
 | Option | Required? | What it means | Effect on the built app |
 |---|---|---|---|
-| **Storage Type** | Yes | `None`, `LocalJson`, `SQLite`, `SQLServer`, … | Persistence technology |
+| **Accounts** | Yes | `none` / `separate` / `unsure` | Whether identity/login is in scope |
+| **Multi-device** | Yes | `no` / `yes` / `later` | Sync / cloud expectations |
+| **Notifications** | Yes | On/off + optional notes | Reminder/notification features; may add a UI contract hint |
+
+Also summarized into `project.description` so agents reading the narrative see the same intent.
+
+---
+
+### 4.9 Data
+
+**What it contributes:** How (and if) the app persists data. Driven largely by **Remember** (Save past results → LocalJson) and recommendations.
+
+| Option | Required? | What it means | Effect on the built app |
+|---|---|---|---|
+| **Storage Type** | Yes* | `None`, `LocalJson`, `SQLite`, `SQLServer`, … | Persistence technology |
+| **Storage decision** | No | `specified` / `recommended` / `agent_discretion` | How strongly the agent must keep that storage choice (Expert detail) |
 | **Connection String Mode** | Yes | Where connection/path config lives | Config file vs env vs secrets vs none |
 | **Migrations Required** | Yes | Whether DB schema migrations are needed | Migration projects/tooling if true |
+
+\*If storage decision is `agent_discretion`, the agent chooses persistence that fits `guidance` and connectivity/accounts needs.
 
 **Tips:**
 - Local file history/settings → often **LocalJson** + connection mode **None**.
 - Leave Remember off for a simple generate-only app.
+- Blueprint recommendations may suggest SQLite or Backup/Export when local data is present.
 
 ---
 
-### 4.9 Build
+### 4.10 Build
 
 **What it contributes:** How the solution is compiled and for which platforms. Usually auto-filled (`WinExe`, `win-x64`).
 
@@ -272,7 +295,7 @@ In the wizard this is **When they click** — pick a button by label and edit st
 
 ---
 
-### 4.10 Deployment
+### 4.11 Deployment
 
 **What it contributes:** How users receive the finished app.
 
@@ -283,7 +306,7 @@ In the wizard this is **When they click** — pick a button by label and edit st
 
 ---
 
-### 4.11 Testing
+### 4.12 Testing
 
 **What it contributes:** Expected automated test approach for the *generated* app.
 
@@ -297,7 +320,7 @@ In the wizard this is **When they click** — pick a button by label and edit st
 
 ---
 
-### 4.12 Documentation
+### 4.13 Documentation
 
 **What it contributes:** Which docs the agent (or Markdown export) should produce.
 
@@ -313,13 +336,14 @@ Empty product sections are **omitted** from Markdown export (no filler lorem ips
 
 ## 5. Recommended fill order (wizard)
 
-1. **Your idea** — type, name, description; pick a template if it fits  
-2. **Screens** — at least one screen with meaningful things  
-3. **When they click** — steps for each button  
-4. **Remember** — only if you need History/Settings  
-5. **Hand off** — Check again → Save / Export for AI agent  
+1. **Ad-Lib** — type, fill-in-the-blank story, product rules; pick a template if it fits
+2. **Needs** — accounts, multi-device, notifications
+3. **Screens** — at least one screen with meaningful things
+4. **When they click** — steps for each button
+5. **Remember** — only if you need History/Settings
+6. **Project Blueprint** — review recommendations + hub → Check again → Save / Export JSON / Export Agent Package
 
-Most environment, architecture, domain, constraints, build, testing, and documentation fields are filled automatically.
+Most environment, architecture, domain, constraints, build, testing, and documentation fields are filled automatically. Use Detail level **Expert** on the Blueprint hub to override theme, navigation, UI framework, language, and to set architecture/storage to Recommended, Let coding agent decide, or Choose myself.
 
 ---
 
@@ -327,20 +351,22 @@ Most environment, architecture, domain, constraints, build, testing, and documen
 
 Before handing the App Blueprint to an agent, ask:
 
-- [ ] App name and description filled  
+- [ ] App name and Ad-Lib / description filled  
+- [ ] Needs answered (accounts, multi-device, notifications)  
 - [ ] At least one **screen** with meaningful **things** (for GUI apps)  
 - [ ] Each important **button** has click steps  
 - [ ] Remember choices match whether you want History/Settings  
-- [ ] Hand-off **Check again** reports ready (or you accept the listed gaps)  
+- [ ] Blueprint hub **Check again** reports ready (or you accept the listed gaps)  
+- [ ] Reviewed recommendations (Use or dismiss intentionally)  
 - [ ] Build **target** present in JSON (usually auto `win-x64`)  
 
 ---
 
 ## 7. After export — using the App Blueprint
 
-1. Keep your saved `.ssot.json` as the contract.  
-2. Point the coding agent at that file and [SSOT_CONTRACT.md](SSOT_CONTRACT.md).  
-3. Expect the agent to follow environment, UI, domain, workflows, and constraints strictly.  
+1. Keep your saved `.ssot.json` (or Agent Package folder) as the contract.  
+2. Point the coding agent at that file/folder and [SSOT_CONTRACT.md](SSOT_CONTRACT.md). For Agent Package, start with `AGENTS.md` then `project.json`.  
+3. Expect the agent to follow environment, UI, domain, workflows, requirements, and constraints strictly — and to honor decision modes (`recommended` vs `agent_discretion`).  
 4. If something was left empty, either fill it in Core AI Architect and re-export, or explicitly tell the agent it may propose those parts.
 
 ---

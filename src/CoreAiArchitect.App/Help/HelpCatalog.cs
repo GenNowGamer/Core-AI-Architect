@@ -50,16 +50,17 @@ public static class HelpCatalog
     private static IEnumerable<HelpTopic> BuildTopics()
     {
         // ---- Beginner wizard ----
-        yield return T("wizard.yourIdea", "Your idea",
-            "Name the app, describe it, pick a type, and optionally start from a template.",
+        yield return T("wizard.yourIdea", "Ad-Lib",
+            "Fill in the blanks about your app, then optionally add product rules and a template.",
             """
             This is the product brief an AI coding agent will read first.
 
             • App type — Windows desktop is the usual choice for home/office tools.
-            • Name + description — write what a person does in the app, not how code is structured.
-            • Templates — “Number / lottery picker” is a good starting shape for ticket/number apps.
+            • Ad-Lib — who it is for, what it helps them do, main capabilities (one per line), online/offline, look.
+            • Product rules — game lists, number rules, validation, caching. You do not design database tables here.
+            • Templates — Number / lottery picker is a good starting shape for ticket/number apps. On a blank start, ad-lib capabilities become starter buttons.
 
-            Tip: If your description mentions games, tickets, or Generate, use Get tips — then pick a matching template.
+            Domain entities in the exported JSON stay generic on purpose. Rich rules belong in the ad-lib / product rules and later click steps.
             """);
 
         yield return T("wizard.screens", "Screens",
@@ -72,11 +73,11 @@ public static class HelpCatalog
             • Button — starts work (like Generate).
             • Results list — shows what was created.
 
-            Rename labels so they match your app. History and Settings appear only if you turn them on in Remember.
+            Screens are the UI contract. Rename labels so they match your app. History and Settings appear only if you turn them on in Remember.
             """);
 
         yield return T("wizard.clicks", "When they click",
-            "Describe what each button does in plain English.",
+            "Describe what each button does — these steps help the AI invent the real data model.",
             """
             Pick a button on the left. Write one step per line on the right.
 
@@ -85,6 +86,8 @@ public static class HelpCatalog
             Read the ticket count
             Create that many tickets using the game’s rules
             Show the tickets in the results list
+
+            Together with your description, these steps tell the coding agent how to model tickets/games — not the generic OptionChoice/ResultItem placeholders alone.
             """);
 
         yield return T("wizard.remember", "Remember stuff?",
@@ -93,12 +96,31 @@ public static class HelpCatalog
             Leave both unchecked unless you need them. Turning them on adds screens automatically; turning them off removes those screens.
             """);
 
-        yield return T("wizard.handoff", "Hand off to AI",
-            "Check the App Blueprint, read the app story, then save or export.",
+        yield return T("wizard.needs", "What does your app need?",
+            "Accounts, multi-device, and notifications in plain language.",
             """
-            The app story should match your screens. If something is missing, go Back and fix Screens or Clicks, then Check again.
+            These gap questions write into requirements and the project description.
 
-            Export for AI agent writes the same JSON blueprint a coding agent can build from.
+            • Accounts — none / separate / not sure (with a short explanation when unsure).
+            • Multi-device — whether data should follow the user.
+            • Notifications — optional reminder notes; adds a UI contract hint for the agent.
+
+            Conflicts (for example offline + multi-device) show up as Blueprint recommendations.
+            """);
+
+        yield return T("wizard.handoff", "Project Blueprint",
+            "Command center: completeness, detail level, story, then save or export.",
+            """
+            The Blueprint hub shows how complete your project is and what decisions remain.
+
+            • Recommendations — deterministic suggestions with Why? and rule IDs (Use to apply).
+            • Detail level — Simple / Standard / Expert changes how much technical detail you see (same blueprint underneath).
+            • Expert — architecture/storage decision modes: Recommended, Let coding agent decide (agent_discretion), Choose myself.
+            • Double-click a section (or Edit selected section) to jump back and fix it.
+            • Check again runs readiness + compatibility.
+            • Export for AI agent writes the JSON blueprint; Export Agent Package writes a full folder (AGENTS.md, specs, tasks).
+
+            Domain entities are scaffolds; description + click steps carry product rules.
             """);
 
         // ---- Sections ----
@@ -803,7 +825,7 @@ public static class HelpCatalog
         yield return T("file.new", "New App Blueprint",
             "Start a new App Blueprint from scratch.",
             """
-            Clears the wizard and begins at Your idea. Pick a type, name the app, and optionally start from a template.
+            Clears the wizard and begins at Ad-Lib. Pick a type, fill in the blanks, and optionally start from a template.
             """);
 
         yield return T("file.open", "Open App Blueprint",
@@ -822,6 +844,19 @@ public static class HelpCatalog
             "Export the App Blueprint JSON for an AI coding agent.",
             """
             Same blueprint content as Save, offered through an export dialog.
+            """);
+
+        yield return T("file.exportAgentPackage", "Export Agent Package",
+            "Export a folder with project.json, AGENTS.md, specifications, and tasks.",
+            """
+            Creates a complete development contract for coding agents (Cursor, Codex, Claude Code, etc.).
+
+            Includes:
+            • project.json / .ssot.json — canonical blueprint
+            • AGENTS.md — how to interpret decision modes and scaffolds
+            • specifications/ — requirements, architecture, UI, data, testing
+            • tasks/ — phased build plan
+            • assets/ — place for icons and reference images
             """);
 
         yield return T("file.exportMarkdown", "Export Markdown",

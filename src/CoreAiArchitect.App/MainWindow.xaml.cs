@@ -48,4 +48,12 @@ public partial class MainWindow : Window
         if (DataContext is MainWindowViewModel vm && IsLoaded)
             vm.MarkReviewEditedCommand.Execute(null);
     }
+
+    private void HubSection_OnDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm || vm.SelectedHubSection is null)
+            return;
+        if (vm.JumpToHubSectionCommand.CanExecute(vm.SelectedHubSection))
+            vm.JumpToHubSectionCommand.Execute(vm.SelectedHubSection);
+    }
 }

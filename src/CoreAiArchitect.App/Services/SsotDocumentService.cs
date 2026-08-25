@@ -21,6 +21,7 @@ public interface ISsotDocumentService
     ValidationResult Finalize();
     void ExportJson(string path);
     void ExportMarkdown(string path);
+    IReadOnlyList<string> ExportAgentPackage(string directory);
     string GetPowerShellExportCommand();
 }
 
@@ -28,6 +29,7 @@ public sealed class SsotDocumentService : ISsotDocumentService
 {
     private readonly JsonExporter _jsonExporter = new();
     private readonly MarkdownExporter _markdownExporter = new();
+    private readonly AgentPackageExporter _agentPackageExporter = new();
     private readonly ValidationEngine _validationEngine = new();
     private readonly SsotReadinessEngine _readinessEngine = new();
 
@@ -101,6 +103,13 @@ public sealed class SsotDocumentService : ISsotDocumentService
         if (Document is null) throw new InvalidOperationException("No document loaded.");
         SsotDocumentNormalizer.Normalize(Document);
         _markdownExporter.ExportToFile(Document, path);
+    }
+
+    public IReadOnlyList<string> ExportAgentPackage(string directory)
+    {
+        if (Document is null) throw new InvalidOperationException("No document loaded.");
+        SsotDocumentNormalizer.Normalize(Document);
+        return _agentPackageExporter.Export(Document, directory);
     }
 
     public string GetPowerShellExportCommand()

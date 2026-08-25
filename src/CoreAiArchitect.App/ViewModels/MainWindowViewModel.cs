@@ -73,6 +73,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly CompatibilityEngine _compatibility = new();
     private readonly BlueprintCompiler _compiler = new();
     private readonly SsotReadinessEngine _readiness = new();
+    private readonly RecommendationEngine _recommendations = new();
     private bool _suppressKindChange;
     private bool _documentInitialized;
 
@@ -96,6 +97,34 @@ public partial class MainWindowViewModel : ObservableObject
         Templates = new ObservableCollection<BlueprintTemplateOption>(
             BlueprintTemplates.All.Select(t => new BlueprintTemplateOption(t.Id, t.Title, t.Description)));
 
+        ConnectivityOptions = new ObservableCollection<string>
+        {
+            "Offline",
+            "Sometimes online",
+            "Online (needs the internet)"
+        };
+
+        LookStyleOptions = new ObservableCollection<string> { "Modern", "Professional", "Simple" };
+        DetailLevelOptions = new ObservableCollection<string> { "Simple", "Standard", "Expert" };
+        AccountsOptions = new ObservableCollection<string>
+        {
+            "No — anyone using the device can use the app",
+            "Yes — users need separate accounts",
+            "I'm not sure"
+        };
+        MultiDeviceOptions = new ObservableCollection<string>
+        {
+            "No — stays on this device",
+            "Yes — follow the user across devices",
+            "Maybe later"
+        };
+        DecisionModeOptions = new ObservableCollection<string>
+        {
+            "Recommended",
+            "Let coding agent decide",
+            "Choose myself"
+        };
+
         Answers = new WizardAnswers();
         SelectedAppKind = AppKinds[0];
         AppKinds[0].IsSelected = true;
@@ -105,6 +134,11 @@ public partial class MainWindowViewModel : ObservableObject
         CurrentStep = WizardStep.YourIdea;
         UpdateStepChrome();
         RefreshDescriptionTips();
+        SyncDetailLevelLabel();
+        SyncConnectivityLabel();
+        SyncAccountsLabel();
+        SyncMultiDeviceLabel();
+        SyncDecisionModeLabels();
     }
 
     public ObservableCollection<AppKindOption> AppKinds { get; }
@@ -114,16 +148,35 @@ public partial class MainWindowViewModel : ObservableObject
     public ObservableCollection<ClickFlowOption> ClickFlows { get; } = new();
     public ObservableCollection<string> ReadyMessages { get; } = new();
     public ObservableCollection<string> DescriptionTips { get; } = new();
+    public ObservableCollection<BlueprintHubSection> HubSections { get; } = new();
+    public ObservableCollection<BlueprintRecommendation> Recommendations { get; } = new();
+    public ObservableCollection<string> ConnectivityOptions { get; }
+    public ObservableCollection<string> LookStyleOptions { get; }
+    public ObservableCollection<string> DetailLevelOptions { get; }
+    public ObservableCollection<string> AccountsOptions { get; }
+    public ObservableCollection<string> MultiDeviceOptions { get; }
+    public ObservableCollection<string> DecisionModeOptions { get; }
+    public ObservableCollection<string> ThemeOptions { get; } = new();
+    public ObservableCollection<string> NavigationOptions { get; } = new();
 
     public WizardAnswers Answers { get; }
 
+    public string DescriptionGuidance => DomainScaffoldPolicy.UserGuidanceDescription;
+    public string ClicksGuidance => DomainScaffoldPolicy.UserGuidanceClicks;
+    public string HandOffGuidance => DomainScaffoldPolicy.UserGuidanceHandOff;
+    public string DomainGuidanceShort => DomainScaffoldPolicy.UserGuidanceShort;
+    public string AccountsHelp =>
+        "You probably don't need accounts if one person/device uses the app and nothing private syncs elsewhere. " +
+        "You may need accounts if users need their information on multiple devices or online.";
+
     public IReadOnlyList<(WizardStep Step, string Title)> StepList { get; } = new (WizardStep, string)[]
     {
-        (WizardStep.YourIdea, "Your idea"),
+        (WizardStep.YourIdea, "Ad-Lib"),
+        (WizardStep.WhatYouNeed, "Needs"),
         (WizardStep.Screens, "Screens"),
         (WizardStep.WhenTheyClick, "Clicks"),
         (WizardStep.RememberStuff, "Remember"),
-        (WizardStep.HandOff, "Hand off")
+        (WizardStep.HandOff, "Blueprint")
     };
 
     [ObservableProperty] private WizardStep _currentStep;
@@ -133,7 +186,7 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string _stepSubtitle = string.Empty;
     [ObservableProperty] private string _progressText = string.Empty;
     [ObservableProperty] private double _progressValue;
-    [ObservableProperty] private string _statusText = "Start by naming your app and saying what it should do.";
+    [ObservableProperty] private string _statusText = "Start with the ad-lib — fill in the blanks about your app.";
     [ObservableProperty] private string _windowTitle = "Core AI Architect";
     [ObservableProperty] private bool _isDirty;
     [ObservableProperty] private bool _canGoBack;
@@ -147,6 +200,20 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private ScreenInfo? _selectedScreen;
     [ObservableProperty] private ControlInfo? _selectedControl;
     [ObservableProperty] private ClickFlowOption? _selectedClickFlow;
+    [ObservableProperty] private string _hubProgressCaption = string.Empty;
+    [ObservableProperty] private string _techSummary = string.Empty;
+    [ObservableProperty] private int _hubReadyPercent;
+    [ObservableProperty] private int _decisionsRemaining;
+    [ObservableProperty] private string _selectedConnectivityLabel = "Offline";
+    [ObservableProperty] private string _selectedDetailLevelLabel = "Simple";
+    [ObservableProperty] private string _selectedAccountsLabel = "No — anyone using the device can use the app";
+    [ObservableProperty] private string _selectedMultiDeviceLabel = "No — stays on this device";
+    [ObservableProperty] private string _selectedArchitectureDecisionLabel = "Recommended";
+    [ObservableProperty] private string _selectedStorageDecisionLabel = "Recommended";
+    [ObservableProperty] private BlueprintHubSection? _selectedHubSection;
+    [ObservableProperty] private BlueprintRecommendation? _selectedRecommendation;
+    [ObservableProperty] private string _recommendationWhyText = string.Empty;
+    [ObservableProperty] private bool _showNotificationNotes;
 
     public bool SavePastResults
     {
@@ -172,6 +239,92 @@ public partial class MainWindowViewModel : ObservableObject
             ApplyRememberToDocument();
             MarkDirty();
         }
+    }
+
+    public DetailLevel SelectedDetailLevel
+    {
+        get => Answers.DetailLevel;
+        set
+        {
+            if (Answers.DetailLevel == value) return;
+            Answers.DetailLevel = value;
+            SyncDetailLevelLabel();
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ShowStandardDetails));
+            OnPropertyChanged(nameof(ShowExpertDetails));
+        }
+    }
+
+    public bool ShowStandardDetails => Answers.DetailLevel >= DetailLevel.Standard;
+    public bool ShowExpertDetails => Answers.DetailLevel >= DetailLevel.Expert;
+
+    public bool Notifications
+    {
+        get => Answers.Notifications;
+        set
+        {
+            if (Answers.Notifications == value) return;
+            Answers.Notifications = value;
+            ShowNotificationNotes = value;
+            OnPropertyChanged();
+            MarkDirty();
+        }
+    }
+
+    partial void OnSelectedConnectivityLabelChanged(string value)
+    {
+        Answers.Connectivity = value switch
+        {
+            "Online (needs the internet)" => ConnectivityChoice.Online,
+            "Sometimes online" => ConnectivityChoice.SometimesOnline,
+            _ => ConnectivityChoice.Offline
+        };
+        MarkDirty();
+    }
+
+    partial void OnSelectedAccountsLabelChanged(string value)
+    {
+        Answers.Accounts = value.StartsWith("Yes", StringComparison.OrdinalIgnoreCase)
+            ? AccountsChoice.Separate
+            : value.StartsWith("I'm not sure", StringComparison.OrdinalIgnoreCase)
+                ? AccountsChoice.Unsure
+                : AccountsChoice.None;
+        MarkDirty();
+    }
+
+    partial void OnSelectedMultiDeviceLabelChanged(string value)
+    {
+        Answers.MultiDevice = value.StartsWith("Yes", StringComparison.OrdinalIgnoreCase)
+            ? MultiDeviceChoice.Yes
+            : value.StartsWith("Maybe", StringComparison.OrdinalIgnoreCase)
+                ? MultiDeviceChoice.Later
+                : MultiDeviceChoice.No;
+        MarkDirty();
+    }
+
+    partial void OnSelectedArchitectureDecisionLabelChanged(string value)
+    {
+        Answers.ArchitectureDecision = ParseDecisionMode(value);
+        MarkDirty();
+    }
+
+    partial void OnSelectedStorageDecisionLabelChanged(string value)
+    {
+        Answers.StorageDecision = ParseDecisionMode(value);
+        MarkDirty();
+    }
+
+    partial void OnSelectedRecommendationChanged(BlueprintRecommendation? value)
+    {
+        RecommendationWhyText = value is null
+            ? string.Empty
+            : $"{value.Title}\n\nWhy?\n{value.Why}\n\nRule: {value.RuleId}";
+    }
+
+    partial void OnSelectedDetailLevelLabelChanged(string value)
+    {
+        if (Enum.TryParse<DetailLevel>(value, ignoreCase: true, out var level))
+            SelectedDetailLevel = level;
     }
 
     partial void OnSelectedAppKindChanged(AppKindOption? value)
@@ -247,8 +400,8 @@ public partial class MainWindowViewModel : ObservableObject
         if (!ConfirmDiscard()) return;
         _suppressKindChange = true;
         Answers.ProjectName = string.Empty;
-        Answers.Description = string.Empty;
         Answers.Owner = string.Empty;
+        Answers.ClearAdLib();
         Answers.SavePastResults = false;
         Answers.IncludeSettingsScreen = false;
         Answers.Memory = MemoryChoice.None;
@@ -262,9 +415,22 @@ public partial class MainWindowViewModel : ObservableObject
         IsDirty = false;
         _suppressKindChange = false;
         DescriptionTips.Clear();
-        StatusText = "Started a new app blueprint.";
+        HubSections.Clear();
+        Recommendations.Clear();
+        SyncConnectivityLabel();
+        SyncDetailLevelLabel();
+        SyncAccountsLabel();
+        SyncMultiDeviceLabel();
+        SyncDecisionModeLabels();
+        ShowNotificationNotes = false;
+        StatusText = "Started a new app blueprint — fill in the ad-lib.";
         UpdateTitle();
         RefreshDescriptionTips();
+        OnPropertyChanged(nameof(SavePastResults));
+        OnPropertyChanged(nameof(IncludeSettingsScreen));
+        OnPropertyChanged(nameof(Notifications));
+        OnPropertyChanged(nameof(ShowStandardDetails));
+        OnPropertyChanged(nameof(ShowExpertDetails));
     }
 
     [RelayCommand]
@@ -340,6 +506,19 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void ExportAgentPackage()
+    {
+        EnsureDocumentFromIdea();
+        CompileDocument();
+        var folder = _dialogs.PickFolder("Choose folder for Agent Package");
+        if (folder is null) return;
+        var target = System.IO.Path.Combine(folder, Answers.DerivedProjectId + "-Agent-Package");
+        var written = _documents.ExportAgentPackage(target);
+        StatusText = $"Exported agent package ({written.Count} files) to {target}";
+        _dialogs.ShowMessage($"Agent package written to:\n{target}\n\nIncludes project.json, AGENTS.md, specifications/, and tasks/.");
+    }
+
+    [RelayCommand]
     private void RunReadyCheck()
     {
         EnsureDocumentFromIdea();
@@ -364,9 +543,45 @@ public partial class MainWindowViewModel : ObservableObject
         IsReadyToExport = result.IsValid;
         ReadySummary = FriendlyIssueMapper.FormatReport(result);
         AppStory = BlueprintCompiler.BuildAppStory(Document!, Answers);
+        RefreshHub(result, compat.Issues);
+        RefreshRecommendations();
         StatusText = IsReadyToExport
             ? "Ready — you can save and hand this blueprint to an AI coding agent."
-            : "Not ready yet — fix the items listed on this page.";
+            : "Not ready yet — resolve the items in the Blueprint hub.";
+    }
+
+    [RelayCommand]
+    private void ApplyRecommendation(BlueprintRecommendation? recommendation)
+    {
+        if (recommendation is null || !recommendation.CanApply) return;
+        EnsureDocumentFromIdea();
+        _recommendations.Apply(recommendation, Answers, Document);
+        OnPropertyChanged(nameof(SavePastResults));
+        CompileDocument();
+        RefreshRecommendations();
+        RunReadyCheck();
+        StatusText = $"Applied recommendation: {recommendation.Title}";
+    }
+
+    [RelayCommand]
+    private void ExplainRecommendation(BlueprintRecommendation? recommendation)
+    {
+        if (recommendation is null) return;
+        SelectedRecommendation = recommendation;
+        _dialogs.ShowMessage(
+            $"{recommendation.Title}\n\nWhy?\n{recommendation.Why}\n\nRule: {recommendation.RuleId}\nSuggested: {recommendation.SuggestedValue}",
+            "Why this recommendation?");
+    }
+
+    [RelayCommand]
+    private void JumpToHubSection(BlueprintHubSection? section)
+    {
+        if (section?.JumpToStep is null) return;
+        CurrentStep = section.JumpToStep.Value;
+        if (CurrentStep == WizardStep.Screens)
+            SyncReviewSelections();
+        if (CurrentStep == WizardStep.WhenTheyClick)
+            SyncClickFlowsFromDocument();
     }
 
     [RelayCommand]
@@ -374,19 +589,24 @@ public partial class MainWindowViewModel : ObservableObject
     {
         _dialogs.ShowMessage(
             "Core AI Architect helps you describe an app in plain language.\n\n" +
-            "1. Name it and say what it should do.\n" +
-            "2. Build each screen with everyday things (choice lists, boxes to type, buttons, results).\n" +
-            "3. Write what happens when someone clicks a button.\n" +
-            "4. Choose whether it remembers past results.\n" +
-            "5. Hand the App Blueprint to an AI coding agent to build it.\n\n" +
-            "You do not need to know programming or AI tools — just describe what people see and do.");
+            "1. Ad-Lib — fill in the blanks (who it’s for, what it helps them do, main capabilities).\n" +
+            "2. Needs — accounts, multi-device, notifications (no jargon).\n" +
+            "3. Screens — build what people see with everyday things.\n" +
+            "4. Clicks — write what happens when someone uses a button.\n" +
+            "5. Remember — optional History / Settings.\n" +
+            "6. Blueprint hub — recommendations with Why?, detail level, then export JSON or an Agent Package.\n\n" +
+            DomainScaffoldPolicy.UserGuidanceShort);
     }
 
     [RelayCommand]
     private void MarkReviewEdited() => MarkDirty();
 
     [RelayCommand]
-    private void RefreshTips() => RefreshDescriptionTips();
+    private void RefreshTips()
+    {
+        ComposeAdLibIntoDescription();
+        RefreshDescriptionTips();
+    }
 
     [RelayCommand]
     private void AddScreen()
@@ -468,11 +688,6 @@ public partial class MainWindowViewModel : ObservableObject
             return;
         }
 
-        if (IsSystemScreen(SelectedScreen) && SelectedScreen.Id.Equals("settings", StringComparison.OrdinalIgnoreCase))
-        {
-            // allow editing
-        }
-
         var profile = _schemaCatalog.RequireById(Answers.ProfileId);
         var types = BlueprintCompiler.ResolveControlTypes(profile);
         var control = BlueprintCompiler.CreateThing(kind, types, SelectedScreen.Controls.Count + 1);
@@ -507,29 +722,36 @@ public partial class MainWindowViewModel : ObservableObject
 
     private void EnsureDocumentFromIdea()
     {
+        ComposeAdLibIntoDescription();
+
         if (_documentInitialized && Document is not null) return;
 
         var profile = _schemaCatalog.RequireById(Answers.ProfileId);
+        Answers.ApplyLookStyleToTheme(_compatibility.AllowedThemes(profile));
         var doc = _compiler.BuildNew(Answers, profile, seedMainScreen: false);
         var templateId = SelectedTemplate?.Id ?? "blank";
         BlueprintTemplates.Apply(templateId, doc, profile);
-        if (Answers.SavePastResults || Answers.IncludeSettingsScreen)
-            _compiler.Compile(doc, Answers, profile);
-        else
-            _compiler.Compile(doc, Answers, profile);
+        if (templateId == "blank")
+        {
+            var seeded = BlueprintCompiler.SeedAdLibFeatures(doc, Answers, profile);
+            if (seeded > 0)
+                StatusText = $"Created a blueprint and added {seeded} button(s) from your ad-lib capabilities.";
+        }
 
-        Document = doc;
-        _documents.ReplaceDocument(doc, profile, _documents.FilePath);
+        Document = _compiler.Compile(doc, Answers, profile);
+        _documents.ReplaceDocument(Document, profile, _documents.FilePath);
         _documentInitialized = true;
         MarkDirty();
-        StatusText = templateId == "blank"
-            ? "Created a blank blueprint. Add screens and things next."
-            : $"Started from the “{SelectedTemplate?.Title}” template.";
+        if (templateId != "blank")
+            StatusText = $"Started from the “{SelectedTemplate?.Title}” template.";
+        else if (Answers.GetFeatureLines().Count == 0)
+            StatusText = "Created a blank blueprint. Add screens and things next.";
     }
 
     private void CompileDocument()
     {
         if (Document is null) return;
+        ComposeAdLibIntoDescription();
         CommitAnswersToDocument();
         SyncClickFlowStepsToDocument();
         var profile = _schemaCatalog.RequireById(Answers.ProfileId);
@@ -537,6 +759,12 @@ public partial class MainWindowViewModel : ObservableObject
         _documents.ReplaceDocument(Document, profile, _documents.FilePath);
         SyncReviewSelections();
         SyncClickFlowsFromDocument();
+    }
+
+    private void ComposeAdLibIntoDescription()
+    {
+        Answers.ComposeDescription();
+        RefreshDescriptionTips();
     }
 
     private void ApplyRememberToDocument()
@@ -553,8 +781,129 @@ public partial class MainWindowViewModel : ObservableObject
         var profile = _schemaCatalog.RequireById(profileId);
         Answers.ProfileId = profileId;
         _compatibility.ApplySafeDefaults(Answers, profile);
+        Answers.ApplyLookStyleToTheme(_compatibility.AllowedThemes(profile));
+        RefreshOptionLists(profile);
         if (_documents.Document is null || _documents.Profile?.Id != profileId)
             _documents.NewDocument(profile);
+    }
+
+    private void RefreshOptionLists(FormSchemaDefinition profile)
+    {
+        ThemeOptions.Clear();
+        foreach (var theme in _compatibility.AllowedThemes(profile))
+            ThemeOptions.Add(theme);
+
+        NavigationOptions.Clear();
+        foreach (var nav in _compatibility.AllowedNavigationPatterns(profile.Id, Answers.UiFramework, profile))
+            NavigationOptions.Add(nav);
+    }
+
+    private void RefreshHub(ValidationResult result, IReadOnlyList<CompatibilityIssue> compatIssues)
+    {
+        var assessment = BlueprintHubAssessor.Assess(Document, Answers, result, compatIssues);
+        HubSections.Clear();
+        foreach (var section in assessment.Sections)
+            HubSections.Add(section);
+
+        HubProgressCaption = assessment.ProgressCaption;
+        TechSummary = assessment.TechSummary;
+        HubReadyPercent = assessment.ReadyPercent;
+        DecisionsRemaining = assessment.DecisionsRemaining;
+        ProgressText = assessment.ProgressCaption;
+        ProgressValue = assessment.ReadyPercent / 100.0;
+    }
+
+    private void RefreshRecommendations()
+    {
+        Recommendations.Clear();
+        foreach (var item in _recommendations.Evaluate(Document, Answers))
+            Recommendations.Add(item);
+        SelectedRecommendation = Recommendations.FirstOrDefault();
+    }
+
+    private void SyncConnectivityLabel()
+    {
+        SelectedConnectivityLabel = Answers.Connectivity switch
+        {
+            ConnectivityChoice.Online => "Online (needs the internet)",
+            ConnectivityChoice.SometimesOnline => "Sometimes online",
+            _ => "Offline"
+        };
+    }
+
+    private void SyncAccountsLabel()
+    {
+        SelectedAccountsLabel = Answers.Accounts switch
+        {
+            AccountsChoice.Separate => "Yes — users need separate accounts",
+            AccountsChoice.Unsure => "I'm not sure",
+            _ => "No — anyone using the device can use the app"
+        };
+    }
+
+    private void SyncMultiDeviceLabel()
+    {
+        SelectedMultiDeviceLabel = Answers.MultiDevice switch
+        {
+            MultiDeviceChoice.Yes => "Yes — follow the user across devices",
+            MultiDeviceChoice.Later => "Maybe later",
+            _ => "No — stays on this device"
+        };
+    }
+
+    private void SyncDecisionModeLabels()
+    {
+        SelectedArchitectureDecisionLabel = FormatDecisionMode(Answers.ArchitectureDecision);
+        SelectedStorageDecisionLabel = FormatDecisionMode(Answers.StorageDecision);
+    }
+
+    private static string FormatDecisionMode(TechnicalDecisionMode mode) => mode switch
+    {
+        TechnicalDecisionMode.AgentDiscretion => "Let coding agent decide",
+        TechnicalDecisionMode.ChooseMyself => "Choose myself",
+        _ => "Recommended"
+    };
+
+    private static TechnicalDecisionMode ParseDecisionMode(string value) =>
+        value.Contains("agent", StringComparison.OrdinalIgnoreCase)
+            ? TechnicalDecisionMode.AgentDiscretion
+            : value.Contains("myself", StringComparison.OrdinalIgnoreCase)
+                ? TechnicalDecisionMode.ChooseMyself
+                : TechnicalDecisionMode.Recommended;
+
+    private void SyncDetailLevelLabel()
+    {
+        SelectedDetailLevelLabel = Answers.DetailLevel.ToString();
+        OnPropertyChanged(nameof(ShowStandardDetails));
+        OnPropertyChanged(nameof(ShowExpertDetails));
+    }
+
+    private void UpdateStepChrome()
+    {
+        var index = (int)CurrentStep;
+        if (CurrentStep != WizardStep.HandOff)
+        {
+            ProgressValue = (index + 1) / (double)StepList.Count;
+            ProgressText = $"Step {index + 1} of {StepList.Count}";
+        }
+
+        CanGoBack = CurrentStep > WizardStep.YourIdea;
+        CanGoNext = CurrentStep < WizardStep.HandOff;
+        IsReadyStep = CurrentStep == WizardStep.HandOff;
+
+        (StepTitle, StepSubtitle) = CurrentStep switch
+        {
+            WizardStep.YourIdea => ("Tell us about your app",
+                "Fill in the blanks — no jargon required. We’ll only ask technical questions later if something is missing."),
+            WizardStep.WhatYouNeed => ("What does your app need?",
+                "Ordinary questions about accounts, devices, and reminders. “I’m not sure” is always OK."),
+            WizardStep.Screens => ("Screens", "Build what people see. Add everyday things — not technical jargon."),
+            WizardStep.WhenTheyClick => ("When they click", "Write business steps here; together with your description they drive the real data model."),
+            WizardStep.RememberStuff => ("Remember stuff?", "Only turn these on if you really need them."),
+            WizardStep.HandOff => ("Project Blueprint",
+                "Command center: recommendations with Why?, completeness, detail level, then export for an AI coding agent."),
+            _ => ("Core AI Architect", string.Empty)
+        };
     }
 
     private bool ValidateCurrentStep()
@@ -568,12 +917,19 @@ public partial class MainWindowViewModel : ObservableObject
                     return false;
                 }
 
+                ComposeAdLibIntoDescription();
                 if (string.IsNullOrWhiteSpace(Answers.ProjectName) || string.IsNullOrWhiteSpace(Answers.Description))
                 {
-                    _dialogs.ShowMessage("Enter an app name and a short description of what it should do.");
+                    _dialogs.ShowMessage(
+                        "Enter an app name and complete the ad-lib (who it’s for / what it helps them do) " +
+                        "or add product rules so we know what to build.");
                     return false;
                 }
 
+                return true;
+
+            case WizardStep.WhatYouNeed:
+                ComposeAdLibIntoDescription();
                 return true;
 
             case WizardStep.Screens:
@@ -706,7 +1062,7 @@ public partial class MainWindowViewModel : ObservableObject
         var profile = _schemaCatalog.RequireById(SelectedAppKind.ProfileId);
         Answers.ProfileId = profile.Id;
         Answers.ProjectName = doc.Project.Name;
-        Answers.Description = doc.Project.Description;
+        Answers.HydrateAdLibFromDescription(doc.Project.Description);
         Answers.Owner = doc.Project.Owner;
         Answers.TargetOs = doc.Environment.TargetOs;
         Answers.Runtime = doc.Environment.Runtime;
@@ -715,16 +1071,53 @@ public partial class MainWindowViewModel : ObservableObject
         Answers.Theme = doc.Ui.Theme;
         Answers.NavigationPattern = doc.Ui.NavigationPattern;
 
+        Answers.Accounts = doc.Requirements.Accounts switch
+        {
+            "separate" => AccountsChoice.Separate,
+            "unsure" => AccountsChoice.Unsure,
+            _ => AccountsChoice.None
+        };
+        Answers.MultiDevice = doc.Requirements.MultiDevice switch
+        {
+            "yes" => MultiDeviceChoice.Yes,
+            "later" => MultiDeviceChoice.Later,
+            _ => MultiDeviceChoice.No
+        };
+        Answers.Notifications = doc.Requirements.Notifications;
+        Answers.NotificationNotes = doc.Requirements.NotificationNotes ?? string.Empty;
+        Answers.ArchitectureDecision = doc.Architecture.PatternDecision.Mode switch
+        {
+            "agent_discretion" => TechnicalDecisionMode.AgentDiscretion,
+            "specified" => TechnicalDecisionMode.ChooseMyself,
+            _ => TechnicalDecisionMode.Recommended
+        };
+        Answers.StorageDecision = doc.Data.Storage.Decision.Mode switch
+        {
+            "agent_discretion" => TechnicalDecisionMode.AgentDiscretion,
+            "specified" => TechnicalDecisionMode.ChooseMyself,
+            _ => TechnicalDecisionMode.Recommended
+        };
+
         Answers.SavePastResults = doc.Ui.Screens.Any(s => s.Id.Equals("history", StringComparison.OrdinalIgnoreCase))
                                   || !string.Equals(doc.Data.Storage.Type, "None", StringComparison.OrdinalIgnoreCase);
         Answers.IncludeSettingsScreen = doc.Ui.Screens.Any(s => s.Id.Equals("settings", StringComparison.OrdinalIgnoreCase));
         Answers.Memory = Answers.SavePastResults ? MemoryChoice.SimpleFiles : MemoryChoice.None;
 
         SelectedTemplate = Templates.FirstOrDefault(t => t.Id == "blank") ?? Templates[0];
+        RefreshOptionLists(profile);
+        SyncConnectivityLabel();
+        SyncDetailLevelLabel();
+        SyncAccountsLabel();
+        SyncMultiDeviceLabel();
+        SyncDecisionModeLabels();
+        ShowNotificationNotes = Answers.Notifications;
         _documents.SetProfile(profile);
         _suppressKindChange = false;
         OnPropertyChanged(nameof(SavePastResults));
         OnPropertyChanged(nameof(IncludeSettingsScreen));
+        OnPropertyChanged(nameof(Notifications));
+        OnPropertyChanged(nameof(ShowStandardDetails));
+        OnPropertyChanged(nameof(ShowExpertDetails));
         RefreshDescriptionTips();
     }
 
@@ -733,26 +1126,6 @@ public partial class MainWindowViewModel : ObservableObject
         DescriptionTips.Clear();
         foreach (var tip in BlueprintTemplates.SuggestFromDescription(Answers.Description))
             DescriptionTips.Add(tip);
-    }
-
-    private void UpdateStepChrome()
-    {
-        var index = (int)CurrentStep;
-        ProgressValue = (index + 1) / (double)StepList.Count;
-        ProgressText = $"Step {index + 1} of {StepList.Count}";
-        CanGoBack = CurrentStep > WizardStep.YourIdea;
-        CanGoNext = CurrentStep < WizardStep.HandOff;
-        IsReadyStep = CurrentStep == WizardStep.HandOff;
-
-        (StepTitle, StepSubtitle) = CurrentStep switch
-        {
-            WizardStep.YourIdea => ("Your idea", "Name your app, say what it should do, and pick a starting shape."),
-            WizardStep.Screens => ("Screens", "Build what people see. Add everyday things — not technical jargon."),
-            WizardStep.WhenTheyClick => ("When they click", "For each button, write the steps in plain English."),
-            WizardStep.RememberStuff => ("Remember stuff?", "Only turn these on if you really need them."),
-            WizardStep.HandOff => ("Hand off to AI", "We’ll check your blueprint and show a plain-English app story."),
-            _ => ("Core AI Architect", string.Empty)
-        };
     }
 
     private bool ConfirmDiscard()
