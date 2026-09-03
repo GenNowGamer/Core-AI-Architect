@@ -1,0 +1,81 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+  <Package
+    Name="Core AI Architect"
+    Manufacturer="Coresynth Studios"
+    Version="1.0.0.0"
+    UpgradeCode="A3C7E1B9-4F82-4D6A-9E15-7B3D0C8F2A64"
+    Scope="perMachine"
+    InstallerVersion="500"
+    Compressed="yes">
+
+    <Icon Id="AppIcon" SourceFile="$(var.IconFile)" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/CoresynthStudios/Core_AI_Architect" />
+
+    <MajorUpgrade
+      DowngradeErrorMessage="A newer version of Core AI Architect is already installed." />
+
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- Install directory: C:\Program Files\Coresynth Studios\Core AI Architect -->
+    <StandardDirectory Id="ProgramFiles6432Folder">
+      <Directory Id="ManufacturerFolder" Name="Coresynth Studios">
+        <Directory Id="INSTALLFOLDER" Name="Core AI Architect" />
+      </Directory>
+    </StandardDirectory>
+
+    <!-- Harvest every file from the self-contained publish output -->
+    <ComponentGroup Id="AppFiles" Directory="INSTALLFOLDER" Source="$(var.PublishDir)">
+      <Files Include="$(var.PublishDir)\**" />
+    </ComponentGroup>
+
+    <!-- Desktop shortcut -->
+    <StandardDirectory Id="DesktopFolder">
+      <Component Id="DesktopShortcut" Guid="F7A2C3D1-8E94-4B67-A5D2-3C1F9E0B4A78">
+        <Shortcut
+          Id="DesktopShortcut"
+          Name="Core AI Architect"
+          Description="SSOT authoring tool for AI coding agents"
+          Target="[INSTALLFOLDER]CoreAiArchitect.exe"
+          WorkingDirectory="INSTALLFOLDER"
+          Icon="AppIcon" />
+        <RegistryValue
+          Root="HKCU"
+          Key="Software\CoresynthStudios\CoreAiArchitect"
+          Name="DesktopShortcut"
+          Type="integer"
+          Value="1"
+          KeyPath="yes" />
+      </Component>
+    </StandardDirectory>
+
+    <!-- Start Menu shortcut -->
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Component Id="StartMenuShortcut" Guid="B9D4E2F6-1A73-4C58-8F0D-6E5B3A7C9D12">
+        <Shortcut
+          Id="StartMenuShortcut"
+          Name="Core AI Architect"
+          Description="SSOT authoring tool for AI coding agents"
+          Target="[INSTALLFOLDER]CoreAiArchitect.exe"
+          WorkingDirectory="INSTALLFOLDER"
+          Icon="AppIcon" />
+        <RegistryValue
+          Root="HKCU"
+          Key="Software\CoresynthStudios\CoreAiArchitect"
+          Name="StartMenuShortcut"
+          Type="integer"
+          Value="1"
+          KeyPath="yes" />
+      </Component>
+    </StandardDirectory>
+
+    <Feature Id="Complete" Title="Core AI Architect" Level="1">
+      <ComponentGroupRef Id="AppFiles" />
+      <ComponentRef Id="DesktopShortcut" />
+      <ComponentRef Id="StartMenuShortcut" />
+    </Feature>
+
+  </Package>
+
+</Wix>

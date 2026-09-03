@@ -24,7 +24,8 @@ Technical defaults (theme, navigation, architecture, build targets) are filled a
 | `src/CoreAiArchitect.Core` | SSOT model, form schemas, `BlueprintCompiler`, recommendations, validation, JSON/Markdown/Agent Package exporters |
 | `src/CoreAiArchitect.App` | WPF guided wizard (Ad-Lib → Needs → Screens → Blueprint hub) |
 | `src/CoreAiArchitect.PowerShell` | PowerShell 7+ binary module |
-| `src/CoreAiArchitect.Package` | MSIX packaging (Visual Studio) |
+| `src/CoreAiArchitect.Installer` | WiX v5 MSI installer (self-contained, builds via `dotnet build`) |
+| `src/CoreAiArchitect.Package` | MSIX packaging (Visual Studio — optional) |
 | `tests/CoreAiArchitect.Tests` | Core unit tests |
 
 ## Build and run
@@ -62,7 +63,25 @@ Test-SsotDocument -Path .\my-project.ssot.json -Profile wpf_desktop
 Export-SsotMarkdown -Path .\my-project.ssot.json -OutFile .\my-project.md
 ```
 
-### MSIX packaging
+### MSI installer (recommended for distribution)
+
+Build a Windows Installer `.msi` that includes the self-contained .NET 8 runtime, schemas, PowerShell module, Desktop and Start Menu shortcuts, and proper Add/Remove Programs registration. Users double-click the MSI — no other installs needed.
+
+```powershell
+# 1. Publish the self-contained app
+dotnet publish src/CoreAiArchitect.App/CoreAiArchitect.App.csproj -c Release -p:PublishProfile=Win64-SelfContained
+
+# 2. Build the MSI (~60 MB)
+dotnet build src/CoreAiArchitect.Installer/CoreAiArchitect.Installer.wixproj -c Release
+```
+
+Output: `src/CoreAiArchitect.Installer/bin/Release/CoreAiArchitect.Installer.msi`
+
+Installs to `C:\Program Files\Coresynth Studios\Core AI Architect\`. Requires the WiX v5 CLI tool (`dotnet tool install --global wix`).
+
+The installer project is in the solution but excluded from the default `dotnet build CoreAiArchitect.sln` so normal development doesn't require WiX tooling.
+
+### MSIX packaging (optional)
 
 1. Install Visual Studio workloads with **MSIX Packaging Tools** ([Microsoft Learn](https://learn.microsoft.com/en-us/windows/msix/desktop/desktop-to-uwp-packaging-dot-net)).
 2. Open `src/CoreAiArchitect.Package/CoreAiArchitect.Package.wapproj` (or add it to the solution in VS).
@@ -91,4 +110,5 @@ From the app you can also **Export Agent Package** — a folder with `AGENTS.md`
 - CommunityToolkit.Mvvm
 - System.Text.Json
 - PowerShell Standard Library (binary module)
+- WiX Toolset v5 (MSI installer)
 - xUnit

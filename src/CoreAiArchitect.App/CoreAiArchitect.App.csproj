@@ -7,6 +7,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <ApplicationTitle>Core AI Architect</ApplicationTitle>
+    <!-- Source for the Windows desktop/taskbar/start-menu icon -->
+    <ApplicationIcon>..\..\Assets\Core-AI-Architect.ico</ApplicationIcon>
     <Product>Core AI Architect</Product>
     <RootNamespace>CoreAiArchitect.App</RootNamespace>
     <AssemblyName>CoreAiArchitect</AssemblyName>

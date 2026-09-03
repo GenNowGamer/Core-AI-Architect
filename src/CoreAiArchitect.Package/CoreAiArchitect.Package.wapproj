@@ -67,11 +67,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="Images\StoreLogo.png" />
-    <Content Include="Images\Square150x150Logo.png" />
-    <Content Include="Images\Square44x44Logo.png" />
-    <Content Include="Images\Wide310x150Logo.png" />
-    <Content Include="Images\SplashScreen.png" />
+    <!-- Use Core-AI-Architect artwork for all MSIX logos/tiles -->
+    <Content Include="..\..\Assets\Core-AI-Architect-icon1024.1024.png" Link="Images\StoreLogo.png" />
+    <Content Include="..\..\Assets\Core-AI-Architect-icon1024.1024.png" Link="Images\Square150x150Logo.png" />
+    <Content Include="..\..\Assets\Core-AI-Architect-icon-256.png" Link="Images\Square44x44Logo.png" />
+    <Content Include="..\..\Assets\Core-AI-Architect-icon1024.1024.png" Link="Images\Wide310x150Logo.png" />
+    <Content Include="..\..\Assets\Core-AI-Architect-icon1024.1024.png" Link="Images\SplashScreen.png" />
   </ItemGroup>
 
   <ItemGroup>
