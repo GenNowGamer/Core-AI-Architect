@@ -41,3 +41,6 @@ _pkginfo.txt
 
 .netlify/
 *.log
+
+# Installer staging (large binaries)
+installer/payload/

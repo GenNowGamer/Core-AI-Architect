@@ -1,6 +1,6 @@
 # Session handoff — Core AI Architect
 
-**Last updated:** 2026-08-25  
+**Last updated:** 2026-09-03  
 **Workspace:** `d:\Robert\Desktop\App Project Builds\Core_AI_Architect`  
 **Product:** Core AI Architect (App Blueprint / SSOT authoring tool for AI coding agents)
 
@@ -8,7 +8,33 @@ Use this file for current-state / continuity context. Operator build/run basics 
 
 ---
 
-## What shipped this session (2026-08-25)
+## What shipped this session (2026-09-03)
+
+App icon integration and MSI installer for end-user distribution.
+
+| Change | Detail |
+|---|---|
+| **App icon** | `Assets/Core-AI-Architect.ico` wired as `ApplicationIcon` in `CoreAiArchitect.App.csproj` (WPF desktop/taskbar icon). MSIX tile logos in `.wapproj` now link to `Assets/Core-AI-Architect-icon-256.png` and `Assets/Core-AI-Architect-icon1024.1024.png`. |
+| **MSI installer** | New WiX v5 project `src/CoreAiArchitect.Installer/` — `dotnet build` produces a ~60 MB self-contained `.msi`. Installs to `C:\Program Files\Coresynth Studios\Core AI Architect\`, creates Desktop + Start Menu shortcuts, registers in Apps & Features. Supports upgrade/uninstall. |
+| **Solution** | `CoreAiArchitect.Installer.wixproj` added to `CoreAiArchitect.sln` (excluded from default build so `dotnet build` of the solution still works without WiX). |
+| **PowerShell installer scripts** | `installer/Install-CoreAiArchitect.ps1` / `Uninstall-CoreAiArchitect.ps1` / `stage_payload.ps1` — alternative script-based installer (copies files, creates shortcuts, registers ARP). |
+| **.gitignore** | Added `installer/payload/` (large staged binaries). |
+
+Primary new/updated files: `Assets/*`, `CoreAiArchitect.App.csproj`, `CoreAiArchitect.Package.wapproj`, `CoreAiArchitect.sln`, `src/CoreAiArchitect.Installer/*`, `installer/*`, `.gitignore`.
+
+### Build the MSI
+
+```powershell
+dotnet publish src/CoreAiArchitect.App/CoreAiArchitect.App.csproj -c Release -p:PublishProfile=Win64-SelfContained
+dotnet build src/CoreAiArchitect.Installer/CoreAiArchitect.Installer.wixproj -c Release
+# Output: src/CoreAiArchitect.Installer/bin/Release/CoreAiArchitect.Installer.msi
+```
+
+Last check this session: MSI built successfully, user-tested and confirmed working.
+
+---
+
+## What shipped previously (2026-08-25)
 
 Product evolution: **Ad-Lib → Needs → storyboard → Blueprint hub**, plus deterministic recommendations, `agent_discretion`, and **Agent Package** export. Same `SsotDocument` / compiler core — no full rewrite.
 
@@ -134,8 +160,11 @@ File at repo root (user-authored, **not** a product sample):
 ## Known tooling notes
 
 - Schema JSON is generated via `tools/GenerateSchemas.ps1` (avoids PowerShell single-element array collapse).
-- MSIX project is **outside** `CoreAiArchitect.sln` so `dotnet build` stays portable; see `src/CoreAiArchitect.Package/README.md`.
-- Everyday launch path is the self-contained folder publish (`Win64-SelfContained`), not MSIX. Do not copy `CoreAiArchitect.exe` out of `bin/publish/win-x64` by itself.
+- **MSI installer** (`src/CoreAiArchitect.Installer/`) is the recommended distribution format. Requires WiX v5 CLI: `dotnet tool install --global wix`. The `.wixproj` is in the solution but excluded from default build.
+- MSIX project (`src/CoreAiArchitect.Package/`) is **outside** the default solution build; see `src/CoreAiArchitect.Package/README.md`.
+- `installer/` folder contains PowerShell-based install/uninstall scripts as an alternative to the MSI. `installer/payload/` is gitignored (large binaries — regenerate via `stage_payload.ps1`).
+- App icon assets live in `Assets/` — `.ico` for the WPF exe, PNGs for MSIX tiles.
+- Everyday launch path is the self-contained folder publish (`Win64-SelfContained`), the MSI install, or `dotnet run`. Do not copy `CoreAiArchitect.exe` out of its folder by itself.
 - Git repo is initialized in this workspace.
 - User-guide **PDF** may be missing or stale relative to [docs/USER_GUIDE.md](docs/USER_GUIDE.md) — regenerate when needed.
 
@@ -144,7 +173,7 @@ File at repo root (user-authored, **not** a product sample):
 ## Suggested next steps
 
 1. Regenerate user-guide PDF from [docs/USER_GUIDE.md](docs/USER_GUIDE.md) (`python tools/GenerateUserGuidePdf.py`).
-2. Re-publish self-contained exe if you want the Desktop shortcut to match this build.
+2. Code-sign the MSI with an Authenticode certificate for trusted distribution.
 3. Optionally re-author lottery blueprint through Ad-Lib → Needs → hub, then export Agent Package for a coding agent.
 4. Install PowerShell 7 if module smoke-testing is needed on this machine.
 
@@ -159,4 +188,5 @@ File at repo root (user-authored, **not** a product sample):
 | [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Markdown source for the user guide PDF |
 | [session_handoff.md](session_handoff.md) | This file — session continuity and open work |
 | [docs/SSOT_CONTRACT.md](docs/SSOT_CONTRACT.md) | Rules for AI agents consuming exported SSOT / App Blueprint JSON / Agent Package |
+| [installer/README.md](installer/README.md) | PowerShell-based installer scripts (alternative to MSI) |
 | [src/CoreAiArchitect.Package/README.md](src/CoreAiArchitect.Package/README.md) | MSIX / Visual Studio packaging only |
