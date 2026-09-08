@@ -34,17 +34,17 @@ public static class SsotDocumentFactory
             {
                 OutputType = ResolveDefaultOutputType(profile.Id),
                 Configuration = new List<string> { "Debug", "Release" },
-                Targets = new List<BuildTargetInfo>()
+                Targets = ResolveDefaultTargets(profile.Id)
             },
             Deployment =
             {
-                Packaging = "None",
+                Packaging = profile.Id.Equals("android_app", StringComparison.OrdinalIgnoreCase) ? "AAB" : "None",
                 AutoUpdate = false
             },
             Testing =
             {
-                UnitTestFramework = "xUnit",
-                UiTestFramework = "None",
+                UnitTestFramework = profile.Id.Equals("android_app", StringComparison.OrdinalIgnoreCase) ? "JUnit" : "xUnit",
+                UiTestFramework = profile.Id.Equals("android_app", StringComparison.OrdinalIgnoreCase) ? "ComposeUiTest" : "None",
                 CoverageTarget = 0
             },
             Documentation =
@@ -85,6 +85,7 @@ public static class SsotDocumentFactory
 
         return profile.Id switch
         {
+            "android_app" => "BottomNavigation",
             "web_api" => "HttpRoutes",
             "cli_tool" => "CommandLine",
             "powershell_module" => "CmdletPipeline",
@@ -97,6 +98,7 @@ public static class SsotDocumentFactory
     private static string ResolveDefaultOutputType(string profileId) =>
         profileId switch
         {
+            "android_app" => "Aab",
             "web_api" => "Exe",
             "cli_tool" => "Exe",
             "powershell_module" => "Library",
@@ -104,4 +106,9 @@ public static class SsotDocumentFactory
             "winpe_tool" => "Exe",
             _ => "WinExe"
         };
+
+    private static List<BuildTargetInfo> ResolveDefaultTargets(string profileId) =>
+        profileId.Equals("android_app", StringComparison.OrdinalIgnoreCase)
+            ? new List<BuildTargetInfo> { new() { Name = "android-arm64", RuntimeIdentifier = "android-arm64" } }
+            : new List<BuildTargetInfo>();
 }

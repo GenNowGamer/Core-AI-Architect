@@ -37,20 +37,23 @@ dotnet test CoreAiArchitect.sln -c Release
 dotnet run --project src/CoreAiArchitect.App/CoreAiArchitect.App.csproj -c Release
 ```
 
+`bin/` and `obj/` under each project are disposable compile intermediates. Do not treat those copies as the app to keep or share.
+
 ### Double-clickable app (self-contained exe)
 
-Publish a Windows x64 build that includes the .NET 8 desktop runtime (no separate runtime install, no `dotnet run`):
+**Canonical output (only maintained runnable folder):** `artifacts\CoreAiArchitect\`
 
 ```powershell
-dotnet publish src/CoreAiArchitect.App/CoreAiArchitect.App.csproj -c Release -p:PublishProfile=Win64-SelfContained
+powershell -File tools\Publish-App.ps1
+# equivalent:
+# dotnet publish src/CoreAiArchitect.App/CoreAiArchitect.App.csproj -c Release -p:PublishProfile=Win64-SelfContained
 ```
 
 Then open:
 
-- Desktop shortcut **Core AI Architect** (`%USERPROFILE%\Desktop\Core AI Architect.lnk`), or
-- `src\CoreAiArchitect.App\bin\publish\win-x64\CoreAiArchitect.exe`
+- `artifacts\CoreAiArchitect\CoreAiArchitect.exe`
 
-Keep the whole `win-x64` folder together — the `.exe` needs the files beside it (including `schemas\`). Recreate the Desktop shortcut after publish if you moved the folder. Profile: `src/CoreAiArchitect.App/Properties/PublishProfiles/Win64-SelfContained.pubxml`.
+Keep the whole `artifacts\CoreAiArchitect` folder together — the `.exe` needs the files beside it (including `schemas\`). Recreate any Desktop shortcut after publish if the target moved. Profile: `src/CoreAiArchitect.App/Properties/PublishProfiles/Win64-SelfContained.pubxml` (wired via `Directory.Build.props`).
 
 ### PowerShell module
 
@@ -68,8 +71,8 @@ Export-SsotMarkdown -Path .\my-project.ssot.json -OutFile .\my-project.md
 Build a Windows Installer `.msi` that includes the self-contained .NET 8 runtime, schemas, PowerShell module, Desktop and Start Menu shortcuts, and proper Add/Remove Programs registration. Users double-click the MSI — no other installs needed.
 
 ```powershell
-# 1. Publish the self-contained app
-dotnet publish src/CoreAiArchitect.App/CoreAiArchitect.App.csproj -c Release -p:PublishProfile=Win64-SelfContained
+# 1. Publish the self-contained app -> artifacts/CoreAiArchitect/
+powershell -File tools\Publish-App.ps1
 
 # 2. Build the MSI (~60 MB)
 dotnet build src/CoreAiArchitect.Installer/CoreAiArchitect.Installer.wixproj -c Release
@@ -94,6 +97,7 @@ The WPF app still builds and runs via `dotnet` or the self-contained folder publ
 Located in `schemas/` (wizard surfaces the common ones; others remain available to the module/schemas):
 
 - `wpf_desktop` (Windows desktop app)
+- `android_app` (Android app — Jetpack Compose / Kotlin defaults)
 - `web_api` (Website / API)
 - `custom` (Something else)
 - Also: `winpe_tool`, `cli_tool`, `powershell_module`, `deployment_automation`

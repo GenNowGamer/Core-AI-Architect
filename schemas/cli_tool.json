@@ -27,10 +27,10 @@
       "label": "Environment",
       "editor": "default",
       "fields": [
-        { "id": "targetOs", "label": "Target OS", "path": "environment.targetOs", "type": "enum", "required": true, "values": ["Windows 11", "Windows 10", "Windows Server 2022", "Cross-Platform"] },
-        { "id": "runtime", "label": "Runtime", "path": "environment.runtime", "type": "enum", "required": true, "values": [".NET 8", ".NET 9", "PowerShell 7", "Native"] },
-        { "id": "uiFramework", "label": "UI Framework", "path": "environment.uiFramework", "type": "enum", "required": true, "values": ["WPF", "WinUI", "None", "ASP.NET", "Console", "PowerShell"] },
-        { "id": "language", "label": "Language", "path": "environment.language", "type": "enum", "required": true, "values": ["C#", "PowerShell", "F#"] }
+        { "id": "targetOs", "label": "Target OS", "path": "environment.targetOs", "type": "enum", "required": true, "values": ["Windows 11","Windows 10","Windows Server 2022","Cross-Platform"] },
+        { "id": "runtime", "label": "Runtime", "path": "environment.runtime", "type": "enum", "required": true, "values": [".NET 8",".NET 9","PowerShell 7","Native"] },
+        { "id": "uiFramework", "label": "UI Framework", "path": "environment.uiFramework", "type": "enum", "required": true, "values": ["WPF","WinUI","None","ASP.NET","Console","PowerShell"] },
+        { "id": "language", "label": "Language", "path": "environment.language", "type": "enum", "required": true, "values": ["C#","PowerShell","F#"] }
       ]
     },
     {
@@ -177,7 +177,7 @@
           "required": false,
           "itemSchema": [
             { "id": "name", "label": "Name", "path": "name", "type": "string", "required": true },
-            { "id": "runtimeIdentifier", "label": "Runtime Identifier", "path": "runtimeIdentifier", "type": "enum", "required": true, "values": ["win-x64", "win-x86", "win-arm64", "portable"] }
+            { "id": "runtimeIdentifier", "label": "Runtime Identifier", "path": "runtimeIdentifier", "type": "enum", "required": true, "values": ["win-x64","win-x86","win-arm64","portable"] }
           ]
         }
       ]
@@ -196,8 +196,8 @@
       "label": "Testing",
       "editor": "default",
       "fields": [
-        { "id": "unitTestFramework", "label": "Unit Test Framework", "path": "testing.unitTestFramework", "type": "enum", "required": true, "values": ["xUnit", "NUnit", "MSTest", "Pester", "None"] },
-        { "id": "uiTestFramework", "label": "UI Test Framework", "path": "testing.uiTestFramework", "type": "enum", "required": true, "values": ["None", "FlaUI", "WinAppDriver", "Playwright"] },
+        { "id": "unitTestFramework", "label": "Unit Test Framework", "path": "testing.unitTestFramework", "type": "enum", "required": true, "values": ["xUnit","NUnit","MSTest","Pester","None"] },
+        { "id": "uiTestFramework", "label": "UI Test Framework", "path": "testing.uiTestFramework", "type": "enum", "required": true, "values": ["None","FlaUI","WinAppDriver","Playwright"] },
         { "id": "coverageTarget", "label": "Coverage Target", "path": "testing.coverageTarget", "type": "number", "required": true }
       ]
     },

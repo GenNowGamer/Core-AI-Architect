@@ -1,10 +1,38 @@
 param(
-  [string]$PayloadDir = (Join-Path $PSScriptRoot 'payload\win-x64'),
+  [string]$PayloadDir = '',
   [string]$InstallDir = (Join-Path $env:ProgramFiles 'Core AI Architect')
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+function Resolve-PayloadDir([string]$requested) {
+  if (-not [string]::IsNullOrWhiteSpace($requested)) {
+    return $requested
+  }
+
+  $repoRoot = Split-Path -Parent $PSScriptRoot
+  $canonical = Join-Path $repoRoot 'artifacts\CoreAiArchitect'
+  $staged = Join-Path $PSScriptRoot 'payload\win-x64'
+
+  if (Test-Path (Join-Path $canonical 'CoreAiArchitect.exe')) {
+    return $canonical
+  }
+  if (Test-Path (Join-Path $staged 'CoreAiArchitect.exe')) {
+    return $staged
+  }
+
+  throw @"
+No app payload found. Publish first, then re-run this installer:
+
+  powershell -File tools\Publish-App.ps1
+
+Expected: $canonical
+Optional staged copy for a standalone installer zip: $staged
+"@
+}
+
+$PayloadDir = Resolve-PayloadDir $PayloadDir
 
 function Test-IsAdministrator {
   $identity = [Security.Principal.WindowsIdentity]::GetCurrent()

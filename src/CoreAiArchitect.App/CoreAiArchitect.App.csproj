@@ -12,6 +12,8 @@
     <Product>Core AI Architect</Product>
     <RootNamespace>CoreAiArchitect.App</RootNamespace>
     <AssemblyName>CoreAiArchitect</AssemblyName>
+    <!-- Single shippable folder for `dotnet publish` (see Directory.Build.props). -->
+    <PublishDir>$(CoreAiArchitectPublishDir)\</PublishDir>
   </PropertyGroup>
 
   <ItemGroup>

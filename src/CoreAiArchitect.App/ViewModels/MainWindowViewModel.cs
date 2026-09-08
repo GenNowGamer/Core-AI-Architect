@@ -90,6 +90,7 @@ public partial class MainWindowViewModel : ObservableObject
         AppKinds = new ObservableCollection<AppKindOption>
         {
             new("wpf_desktop", "Windows desktop app", "A normal Windows program with windows and buttons."),
+            new("android_app", "Android app", "A phone or tablet app for Android devices."),
             new("web_api", "Website / API", "A backend that websites or other apps call."),
             new("custom", "Something else", "We’ll use flexible defaults you can refine later.")
         };

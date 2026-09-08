@@ -276,13 +276,19 @@ public sealed class WizardAnswers : INotifyPropertyChanged
     public void ApplyLookStyleToTheme(IReadOnlyList<string> allowedThemes)
     {
         if (allowedThemes.Count == 0) return;
-        var preferred = LookStyle.Equals("Modern", StringComparison.OrdinalIgnoreCase)
-            && allowedThemes.Contains("Fluent", StringComparer.OrdinalIgnoreCase)
-                ? "Fluent"
-                : allowedThemes[0];
+        string preferred;
+        if (LookStyle.Equals("Modern", StringComparison.OrdinalIgnoreCase)
+            && allowedThemes.Contains("Material3", StringComparer.OrdinalIgnoreCase))
+            preferred = "Material3";
+        else if (LookStyle.Equals("Modern", StringComparison.OrdinalIgnoreCase)
+                 && allowedThemes.Contains("Fluent", StringComparer.OrdinalIgnoreCase))
+            preferred = "Fluent";
+        else
+            preferred = allowedThemes[0];
 
         if (string.IsNullOrWhiteSpace(Theme)
             || Theme.Equals("Default", StringComparison.OrdinalIgnoreCase)
+            || Theme.Equals("Material", StringComparison.OrdinalIgnoreCase)
             || !allowedThemes.Contains(Theme, StringComparer.OrdinalIgnoreCase))
         {
             Theme = preferred;
@@ -320,6 +326,7 @@ public sealed class WizardAnswers : INotifyPropertyChanged
     public static string ProfileLabel(string profileId) => profileId switch
     {
         "wpf_desktop" => "Windows desktop app",
+        "android_app" => "Android app",
         "web_api" => "Website / API",
         "custom" => "Something else",
         "winpe_tool" => "Recovery-style tool",

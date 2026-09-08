@@ -76,6 +76,13 @@ public sealed class RecommendationEngine
                     document.Ui.Theme = "Fluent";
                 break;
 
+            case "theme-material3":
+                answers.Theme = "Material3";
+                answers.LookStyle = "Modern";
+                if (document is not null)
+                    document.Ui.Theme = "Material3";
+                break;
+
             case "backup-feature":
                 if (document is null) break;
                 var main = document.Ui.Screens.FirstOrDefault(s =>
@@ -158,9 +165,19 @@ public sealed class RecommendationEngine
 
     private static void RecommendArchitecture(SsotDocument? document, WizardAnswers answers, List<BlueprintRecommendation> list)
     {
-        var desktop = answers.UiFramework.Equals("WPF", StringComparison.OrdinalIgnoreCase)
-                      || answers.UiFramework.Equals("WinUI", StringComparison.OrdinalIgnoreCase);
-        if (!desktop) return;
+        var interactiveUi = answers.UiFramework.Equals("WPF", StringComparison.OrdinalIgnoreCase)
+                      || answers.UiFramework.Equals("WinUI", StringComparison.OrdinalIgnoreCase)
+                      || answers.UiFramework.Equals("Jetpack Compose", StringComparison.OrdinalIgnoreCase)
+                      || answers.UiFramework.Equals("Android Views", StringComparison.OrdinalIgnoreCase)
+                      || answers.UiFramework.Equals(".NET MAUI", StringComparison.OrdinalIgnoreCase);
+        if (!interactiveUi) return;
+
+        var isAndroid = answers.UiFramework.Equals("Jetpack Compose", StringComparison.OrdinalIgnoreCase)
+                        || answers.UiFramework.Equals("Android Views", StringComparison.OrdinalIgnoreCase)
+                        || answers.UiFramework.Equals(".NET MAUI", StringComparison.OrdinalIgnoreCase);
+        var why = isAndroid
+            ? "This is a mobile app with screens and persistent UI state. MVVM separates the interface from application logic and works well with Jetpack Compose / Android Views."
+            : "This is a desktop app with screens and persistent UI state. MVVM separates the interface from application logic and works well with WPF/WinUI.";
 
         var screenCount = document?.Ui.Screens.Count ?? 0;
         var pattern = document?.Architecture.Pattern ?? string.Empty;
@@ -168,9 +185,9 @@ public sealed class RecommendationEngine
         {
             list.Add(new BlueprintRecommendation
             {
-                RuleId = "ARCH-DESKTOP-MVVM-001",
+                RuleId = isAndroid ? "ARCH-MOBILE-MVVM-001" : "ARCH-DESKTOP-MVVM-001",
                 Title = "MVVM architecture recommended",
-                Why = "This is a desktop app with screens and persistent UI state. MVVM separates the interface from application logic and works well with WPF/WinUI.",
+                Why = why,
                 Category = "Architecture",
                 SuggestedValue = "MVVM",
                 ApplyKind = "architecture-mvvm",
@@ -181,9 +198,9 @@ public sealed class RecommendationEngine
         {
             list.Add(new BlueprintRecommendation
             {
-                RuleId = "ARCH-DESKTOP-MVVM-001",
+                RuleId = isAndroid ? "ARCH-MOBILE-MVVM-001" : "ARCH-DESKTOP-MVVM-001",
                 Title = "MVVM architecture recommended",
-                Why = "This is a desktop app with screens and persistent UI state. MVVM separates the interface from application logic and works well with WPF/WinUI.",
+                Why = why,
                 Category = "Architecture",
                 SuggestedValue = "MVVM",
                 ApplyKind = "architecture-mvvm",
@@ -199,6 +216,41 @@ public sealed class RecommendationEngine
             return;
 
         var theme = document?.Ui.Theme ?? answers.Theme;
+        var isAndroid = answers.ProfileId.Equals("android_app", StringComparison.OrdinalIgnoreCase)
+                        || answers.UiFramework.Equals("Jetpack Compose", StringComparison.OrdinalIgnoreCase)
+                        || answers.UiFramework.Equals("Android Views", StringComparison.OrdinalIgnoreCase)
+                        || answers.UiFramework.Equals(".NET MAUI", StringComparison.OrdinalIgnoreCase);
+
+        if (isAndroid)
+        {
+            if (theme.Equals("Material3", StringComparison.OrdinalIgnoreCase))
+            {
+                list.Add(new BlueprintRecommendation
+                {
+                    RuleId = "UI-MODERN-MATERIAL3-001",
+                    Title = "Material 3 theme recommended",
+                    Why = "You asked for a modern look. Material 3 is the modern Android theme option in this blueprint profile.",
+                    Category = "UI",
+                    SuggestedValue = "Material3",
+                    ApplyKind = "theme-material3",
+                    IsApplied = true,
+                    CanApply = false
+                });
+                return;
+            }
+
+            list.Add(new BlueprintRecommendation
+            {
+                RuleId = "UI-MODERN-MATERIAL3-001",
+                Title = "Material 3 theme recommended",
+                Why = "You asked for a modern look. Material 3 is the modern Android theme option in this blueprint profile.",
+                Category = "UI",
+                SuggestedValue = "Material3",
+                ApplyKind = "theme-material3"
+            });
+            return;
+        }
+
         if (theme.Equals("Fluent", StringComparison.OrdinalIgnoreCase))
         {
             list.Add(new BlueprintRecommendation

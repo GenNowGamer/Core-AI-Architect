@@ -26,13 +26,15 @@ public class SchemaCatalogTests
     {
         var catalog = new SchemaCatalog();
         catalog.LoadFromDirectory(SchemasDir);
-        Assert.Equal(7, catalog.Profiles.Count);
+        Assert.Equal(8, catalog.Profiles.Count);
         Assert.Contains(catalog.Profiles, p => p.Id == "wpf_desktop");
+        Assert.Contains(catalog.Profiles, p => p.Id == "android_app");
         Assert.Contains(catalog.Profiles, p => p.Id == "custom");
     }
 
     [Theory]
     [InlineData("wpf_desktop")]
+    [InlineData("android_app")]
     [InlineData("winpe_tool")]
     [InlineData("web_api")]
     [InlineData("cli_tool")]
@@ -83,6 +85,27 @@ public class DocumentFactoryTests
         Assert.Empty(doc.Ui.Screens);
         Assert.Empty(doc.Workflows);
         Assert.Empty(doc.Architecture.Modules);
+    }
+
+    [Fact]
+    public void NewDocument_AndroidProfile_UsesMobileDefaults()
+    {
+        var catalog = new SchemaCatalog();
+        catalog.LoadFromDirectory(SchemasDir);
+        var profile = catalog.RequireById("android_app");
+        var doc = SsotDocumentFactory.CreateNew(profile);
+
+        Assert.Equal("Android", doc.Environment.TargetOs);
+        Assert.Equal("Android Runtime", doc.Environment.Runtime);
+        Assert.Equal("Jetpack Compose", doc.Environment.UiFramework);
+        Assert.Equal("Kotlin", doc.Environment.Language);
+        Assert.Equal("Material3", doc.Ui.Theme);
+        Assert.Equal("BottomNavigation", doc.Ui.NavigationPattern);
+        Assert.Equal("Aab", doc.Build.OutputType);
+        Assert.Equal("AAB", doc.Deployment.Packaging);
+        Assert.Equal("JUnit", doc.Testing.UnitTestFramework);
+        Assert.Equal("ComposeUiTest", doc.Testing.UiTestFramework);
+        Assert.Contains(doc.Build.Targets, t => t.RuntimeIdentifier == "android-arm64");
     }
 }
 
@@ -370,6 +393,7 @@ public class WizardBuilderTests
 
     [Theory]
     [InlineData("wpf_desktop")]
+    [InlineData("android_app")]
     [InlineData("web_api")]
     [InlineData("cli_tool")]
     [InlineData("powershell_module")]
@@ -399,6 +423,51 @@ public class WizardBuilderTests
         Assert.NotEmpty(doc.Domain.Entities);
         Assert.NotEmpty(doc.Workflows);
         Assert.NotEmpty(doc.Build.Targets);
+    }
+
+    [Fact]
+    public void BlueprintCompiler_AndroidProfile_EmitsMobileControlsAndPackaging()
+    {
+        var catalog = new SchemaCatalog();
+        catalog.LoadFromDirectory(SchemasDir);
+        var profile = catalog.RequireById("android_app");
+        var answers = new WizardAnswers
+        {
+            ProfileId = "android_app",
+            ProjectName = "Demo Android App",
+            Description = "A simple Android app for testing mobile blueprints.",
+            LookStyle = "Modern",
+            SavePastResults = true,
+            Memory = MemoryChoice.SimpleFiles
+        };
+
+        var compat = new CompatibilityEngine();
+        compat.ApplySafeDefaults(answers, profile);
+        answers.ApplyLookStyleToTheme(compat.AllowedThemes(profile));
+        Assert.Equal("Material3", answers.Theme);
+        Assert.True(compat.Evaluate(answers, profile).IsCompatible);
+
+        var doc = new BlueprintCompiler().BuildNew(answers, profile, seedMainScreen: true);
+        var types = BlueprintCompiler.ResolveControlTypes(profile);
+        doc.Ui.Screens.First(s => s.Id == "main").Controls.Add(
+            BlueprintCompiler.CreateThing(BlueprintThingKind.Button, types, 1));
+        doc = new BlueprintCompiler().Compile(doc, answers, profile);
+
+        Assert.Equal("Android", doc.Environment.TargetOs);
+        Assert.Equal("Jetpack Compose", doc.Environment.UiFramework);
+        Assert.Equal("Kotlin", doc.Environment.Language);
+        Assert.Equal("Aab", doc.Build.OutputType);
+        Assert.Equal("AAB", doc.Deployment.Packaging);
+        Assert.Equal("JUnit", doc.Testing.UnitTestFramework);
+        Assert.Equal("ComposeUiTest", doc.Testing.UiTestFramework);
+        Assert.Equal("DataStore", doc.Data.Storage.Type);
+        Assert.Contains(doc.Constraints.AllowedLibraries, l => l.Contains("compose", StringComparison.OrdinalIgnoreCase));
+
+        var main = Assert.Single(doc.Ui.Screens.Where(s => s.Id == "main"));
+        Assert.Contains(main.Controls, c => c.Type == "Button");
+
+        var ready = new SsotReadinessEngine().Assess(doc, profile);
+        Assert.True(ready.IsValid, string.Join("; ", ready.Errors.Select(e => e.Message)));
     }
 
     [Fact]

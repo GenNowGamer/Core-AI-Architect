@@ -27,10 +27,10 @@
       "label": "Environment",
       "editor": "default",
       "fields": [
-        { "id": "targetOs", "label": "Target OS", "path": "environment.targetOs", "type": "enum", "required": true, "values": ["Windows 11", "Windows 10", "Windows Server 2022", "Cross-Platform"] },
-        { "id": "runtime", "label": "Runtime", "path": "environment.runtime", "type": "enum", "required": true, "values": [".NET 8", ".NET 9", "PowerShell 7", "Native"] },
-        { "id": "uiFramework", "label": "UI Framework", "path": "environment.uiFramework", "type": "enum", "required": true, "values": ["WPF", "WinUI", "None", "ASP.NET", "Console", "PowerShell"] },
-        { "id": "language", "label": "Language", "path": "environment.language", "type": "enum", "required": true, "values": ["C#", "PowerShell", "F#"] }
+        { "id": "targetOs", "label": "Target OS", "path": "environment.targetOs", "type": "enum", "required": true, "values": ["Windows 11","Windows 10","Windows Server 2022","Android","Cross-Platform"] },
+        { "id": "runtime", "label": "Runtime", "path": "environment.runtime", "type": "enum", "required": true, "values": [".NET 8",".NET 9","PowerShell 7","Android Runtime","Native"] },
+        { "id": "uiFramework", "label": "UI Framework", "path": "environment.uiFramework", "type": "enum", "required": true, "values": ["WPF","WinUI","Jetpack Compose","Android Views",".NET MAUI","None","ASP.NET","Console","PowerShell"] },
+        { "id": "language", "label": "Language", "path": "environment.language", "type": "enum", "required": true, "values": ["C#","PowerShell","F#","Kotlin","Java"] }
       ]
     },
     {
@@ -38,7 +38,7 @@
       "label": "Architecture",
       "editor": "default",
       "fields": [
-        { "id": "pattern", "label": "Pattern", "path": "architecture.pattern", "type": "enum", "required": true, "values": ["MVVM","MVC","CleanArchitecture","Modular","Custom"] },
+        { "id": "pattern", "label": "Pattern", "path": "architecture.pattern", "type": "enum", "required": true, "values": ["MVVM","MVC","CleanArchitecture","MVI","Modular","Custom"] },
         { "id": "layers", "label": "Layers", "path": "architecture.layers", "type": "stringList", "required": false },
         {
           "id": "modules",
@@ -59,8 +59,8 @@
       "label": "UI",
       "editor": "uiBuilder",
       "fields": [
-        { "id": "theme", "label": "Theme", "path": "ui.theme", "type": "enum", "required": true, "values": ["Default","Fluent","Custom"] },
-        { "id": "navigationPattern", "label": "Navigation Pattern", "path": "ui.navigationPattern", "type": "enum", "required": true, "values": ["Window+Dialogs","NavigationFrame","Tabbed","HttpRoutes","CommandLine","Custom"] },
+        { "id": "theme", "label": "Theme", "path": "ui.theme", "type": "enum", "required": true, "values": ["Default","Fluent","Material3","Material","Custom"] },
+        { "id": "navigationPattern", "label": "Navigation Pattern", "path": "ui.navigationPattern", "type": "enum", "required": true, "values": ["Window+Dialogs","NavigationFrame","Tabbed","BottomNavigation","NavigationCompose","SingleActivity","HttpRoutes","CommandLine","Custom"] },
         {
           "id": "screens",
           "label": "Screens / Surfaces",
@@ -79,7 +79,7 @@
               "required": false,
               "itemSchema": [
                 { "id": "id", "label": "Id", "path": "id", "type": "string", "required": true },
-                { "id": "type", "label": "Type", "path": "type", "type": "enum", "required": true, "values": ["Button","TextBox","DataGrid","ListView","MenuItem","ComboBox","CheckBox","Endpoint","Command","Cmdlet","Custom"] },
+                { "id": "type", "label": "Type", "path": "type", "type": "enum", "required": true, "values": ["Button","TextBox","TextField","DataGrid","ListView","LazyColumn","MenuItem","ComboBox","DropdownMenu","CheckBox","Endpoint","Command","Cmdlet","Custom"] },
                 { "id": "label", "label": "Label", "path": "label", "type": "string", "required": false },
                 { "id": "action", "label": "Action", "path": "action", "type": "string", "required": false }
               ]
@@ -157,7 +157,7 @@
       "label": "Data",
       "editor": "default",
       "fields": [
-        { "id": "storageType", "label": "Storage Type", "path": "data.storage.type", "type": "enum", "required": true, "values": ["None","SQLite","SQLServer","PostgreSQL","LocalJson","Registry"] },
+        { "id": "storageType", "label": "Storage Type", "path": "data.storage.type", "type": "enum", "required": true, "values": ["None","SQLite","SQLServer","PostgreSQL","Room","DataStore","LocalJson","Registry"] },
         { "id": "connectionStringMode", "label": "Connection String Mode", "path": "data.storage.connectionStringMode", "type": "enum", "required": true, "values": ["None", "ConfigFile", "EnvironmentVariable", "UserSecrets"] },
         { "id": "migrationsRequired", "label": "Migrations Required", "path": "data.storage.migrationsRequired", "type": "boolean", "required": true }
       ]
@@ -167,7 +167,7 @@
       "label": "Build",
       "editor": "default",
       "fields": [
-        { "id": "outputType", "label": "Output Type", "path": "build.outputType", "type": "enum", "required": true, "values": ["WinExe","Exe","Library"] },
+        { "id": "outputType", "label": "Output Type", "path": "build.outputType", "type": "enum", "required": true, "values": ["WinExe","Exe","Library","Aab","Apk"] },
         { "id": "configuration", "label": "Configurations", "path": "build.configuration", "type": "stringList", "required": true },
         {
           "id": "targets",
@@ -177,7 +177,7 @@
           "required": false,
           "itemSchema": [
             { "id": "name", "label": "Name", "path": "name", "type": "string", "required": true },
-            { "id": "runtimeIdentifier", "label": "Runtime Identifier", "path": "runtimeIdentifier", "type": "enum", "required": true, "values": ["win-x64", "win-x86", "win-arm64", "portable"] }
+            { "id": "runtimeIdentifier", "label": "Runtime Identifier", "path": "runtimeIdentifier", "type": "enum", "required": true, "values": ["win-x64","win-x86","win-arm64","android-arm64","android-x64","portable"] }
           ]
         }
       ]
@@ -187,7 +187,7 @@
       "label": "Deployment",
       "editor": "default",
       "fields": [
-        { "id": "packaging", "label": "Packaging", "path": "deployment.packaging", "type": "enum", "required": true, "values": ["None","MSIX","Zip","Docker","DotnetTool","PSGallery","WinPEMedia"] },
+        { "id": "packaging", "label": "Packaging", "path": "deployment.packaging", "type": "enum", "required": true, "values": ["None","MSIX","Zip","Docker","DotnetTool","PSGallery","WinPEMedia","AAB","APK","PlayStore"] },
         { "id": "autoUpdate", "label": "Auto Update", "path": "deployment.autoUpdate", "type": "boolean", "required": true }
       ]
     },
@@ -196,8 +196,8 @@
       "label": "Testing",
       "editor": "default",
       "fields": [
-        { "id": "unitTestFramework", "label": "Unit Test Framework", "path": "testing.unitTestFramework", "type": "enum", "required": true, "values": ["xUnit", "NUnit", "MSTest", "Pester", "None"] },
-        { "id": "uiTestFramework", "label": "UI Test Framework", "path": "testing.uiTestFramework", "type": "enum", "required": true, "values": ["None", "FlaUI", "WinAppDriver", "Playwright"] },
+        { "id": "unitTestFramework", "label": "Unit Test Framework", "path": "testing.unitTestFramework", "type": "enum", "required": true, "values": ["xUnit","NUnit","MSTest","Pester","JUnit","None"] },
+        { "id": "uiTestFramework", "label": "UI Test Framework", "path": "testing.uiTestFramework", "type": "enum", "required": true, "values": ["None","FlaUI","WinAppDriver","Playwright","Espresso","ComposeUiTest"] },
         { "id": "coverageTarget", "label": "Coverage Target", "path": "testing.coverageTarget", "type": "number", "required": true }
       ]
     },
