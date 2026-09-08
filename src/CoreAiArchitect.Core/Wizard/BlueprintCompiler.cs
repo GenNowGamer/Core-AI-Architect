@@ -46,22 +46,22 @@ public sealed class BlueprintCompiler
         var (type, label, action, idBase) = kind switch
         {
             BlueprintThingKind.ChoiceList => (
-                Pick(controlTypes, "ComboBox", "Option", "Parameter", "TextBox"),
+                Pick(controlTypes, "ComboBox", "DropdownMenu", "ExposedDropdownMenu", "Option", "Parameter", "TextBox", "TextField"),
                 "Choice list",
                 "SelectOption",
                 "choiceList"),
             BlueprintThingKind.PlaceToType => (
-                Pick(controlTypes, "TextBox", "Parameter", "Argument", "ComboBox"),
+                Pick(controlTypes, "TextBox", "TextField", "OutlinedTextField", "Parameter", "Argument", "ComboBox"),
                 "Place to type",
                 "SetValue",
                 "textBox"),
             BlueprintThingKind.Button => (
-                Pick(controlTypes, "Button", "Command", "Cmdlet", "Endpoint", "Stage"),
+                Pick(controlTypes, "Button", "FloatingActionButton", "Command", "Cmdlet", "Endpoint", "Stage"),
                 "Button",
                 "DoAction",
                 "button"),
             BlueprintThingKind.ResultsList => (
-                Pick(controlTypes, "ListView", "DataGrid", "PipelineInput", "Task"),
+                Pick(controlTypes, "ListView", "LazyColumn", "RecyclerView", "DataGrid", "PipelineInput", "Task"),
                 "Results",
                 "ViewResults",
                 "resultsList"),
@@ -239,7 +239,7 @@ public sealed class BlueprintCompiler
         main.Controls.Add(new ControlInfo
         {
             Id = "remindersHint",
-            Type = Pick(types, "TextBox", "Parameter", "Option", "Button"),
+            Type = Pick(types, "TextBox", "TextField", "OutlinedTextField", "Parameter", "Option", "Button"),
             Label = "Reminders / notifications",
             Action = "ConfigureNotifications"
         });
@@ -264,12 +264,12 @@ public sealed class BlueprintCompiler
         switch (answers.Memory)
         {
             case MemoryChoice.SimpleFiles:
-                doc.Data.Storage.Type = PickStorage("LocalJson", "SQLite", "None");
+                doc.Data.Storage.Type = PickStorage("DataStore", "LocalJson", "SQLite", "None");
                 doc.Data.Storage.ConnectionStringMode = "None";
                 doc.Data.Storage.MigrationsRequired = false;
                 break;
             case MemoryChoice.Database:
-                doc.Data.Storage.Type = PickStorage("SQLite", "SQLServer", "PostgreSQL", "LocalJson");
+                doc.Data.Storage.Type = PickStorage("Room", "SQLite", "SQLServer", "PostgreSQL", "LocalJson");
                 doc.Data.Storage.ConnectionStringMode = "ConfigFile";
                 doc.Data.Storage.MigrationsRequired = true;
                 break;
@@ -325,8 +325,8 @@ public sealed class BlueprintCompiler
     private void ApplyRememberScreens(SsotDocument doc, WizardAnswers answers, FormSchemaDefinition profile)
     {
         var types = ResolveControlTypes(profile);
-        var buttonType = Pick(types, "Button", "Command", "Cmdlet", "Endpoint", "Stage");
-        var listType = Pick(types, "ListView", "DataGrid", "PipelineInput", "Task");
+        var buttonType = Pick(types, "Button", "FloatingActionButton", "Command", "Cmdlet", "Endpoint", "Stage");
+        var listType = Pick(types, "ListView", "LazyColumn", "RecyclerView", "DataGrid", "PipelineInput", "Task");
 
         if (answers.SavePastResults)
         {
@@ -525,7 +525,7 @@ public sealed class BlueprintCompiler
         if (doc.Ui.Screens.All(s => s.Controls.Count == 0))
         {
             var types = ResolveControlTypes(profile);
-            var buttonType = Pick(types, "Button", "Command", "Cmdlet", "Endpoint");
+            var buttonType = Pick(types, "Button", "FloatingActionButton", "Command", "Cmdlet", "Endpoint");
             doc.Ui.Screens[0].Controls.Add(new ControlInfo
             {
                 Id = "primaryButton",
@@ -643,25 +643,53 @@ public sealed class BlueprintCompiler
     {
         doc.Build.OutputType = profile.Id switch
         {
+            "android_app" => "Aab",
             "web_api" or "cli_tool" or "winpe_tool" or "deployment_automation" => "Exe",
             "powershell_module" => "Library",
             _ => "WinExe"
         };
         doc.Build.Configuration = new List<string> { "Debug", "Release" };
-        doc.Build.Targets = new List<BuildTargetInfo>
+        if (profile.Id.Equals("android_app", StringComparison.OrdinalIgnoreCase))
         {
-            new() { Name = "win-x64", RuntimeIdentifier = "win-x64" }
-        };
+            doc.Build.Targets = new List<BuildTargetInfo>
+            {
+                new() { Name = "android-arm64", RuntimeIdentifier = "android-arm64" }
+            };
+            doc.Deployment.Packaging = "AAB";
+        }
+        else
+        {
+            doc.Build.Targets = new List<BuildTargetInfo>
+            {
+                new() { Name = "win-x64", RuntimeIdentifier = "win-x64" }
+            };
+        }
     }
 
     private static void ApplyTesting(SsotDocument doc, WizardAnswers answers)
     {
-        doc.Testing.UnitTestFramework = answers.Language.Equals("PowerShell", StringComparison.OrdinalIgnoreCase)
-            ? "Pester"
-            : "xUnit";
-        var desktop = answers.UiFramework.Equals("WPF", StringComparison.OrdinalIgnoreCase)
-                      || answers.UiFramework.Equals("WinUI", StringComparison.OrdinalIgnoreCase);
-        doc.Testing.UiTestFramework = desktop ? "FlaUI" : "None";
+        if (answers.Language.Equals("PowerShell", StringComparison.OrdinalIgnoreCase))
+            doc.Testing.UnitTestFramework = "Pester";
+        else if (answers.Language.Equals("Kotlin", StringComparison.OrdinalIgnoreCase)
+                 || answers.Language.Equals("Java", StringComparison.OrdinalIgnoreCase)
+                 || IsAndroidUi(answers.UiFramework))
+            doc.Testing.UnitTestFramework = "JUnit";
+        else
+            doc.Testing.UnitTestFramework = "xUnit";
+
+        if (IsAndroidUi(answers.UiFramework))
+        {
+            doc.Testing.UiTestFramework = answers.UiFramework.Equals("Jetpack Compose", StringComparison.OrdinalIgnoreCase)
+                ? "ComposeUiTest"
+                : "Espresso";
+        }
+        else
+        {
+            var desktop = answers.UiFramework.Equals("WPF", StringComparison.OrdinalIgnoreCase)
+                          || answers.UiFramework.Equals("WinUI", StringComparison.OrdinalIgnoreCase);
+            doc.Testing.UiTestFramework = desktop ? "FlaUI" : "None";
+        }
+
         doc.Testing.CoverageTarget = 0.6;
     }
 
@@ -673,10 +701,22 @@ public sealed class BlueprintCompiler
         doc.Constraints.AllowedLibraries = profile.Id switch
         {
             "wpf_desktop" or "custom" => new List<string> { "CommunityToolkit.Mvvm", "Microsoft.Extensions.DependencyInjection" },
+            "android_app" => new List<string>
+            {
+                "androidx.compose.ui:ui",
+                "androidx.compose.material3:material3",
+                "androidx.navigation:navigation-compose",
+                "androidx.lifecycle:lifecycle-viewmodel-compose"
+            },
             _ => new List<string>()
         };
         doc.Constraints.ForbiddenLibraries = new List<string>();
     }
+
+    private static bool IsAndroidUi(string uiFramework) =>
+        uiFramework.Equals("Jetpack Compose", StringComparison.OrdinalIgnoreCase)
+        || uiFramework.Equals("Android Views", StringComparison.OrdinalIgnoreCase)
+        || uiFramework.Equals(".NET MAUI", StringComparison.OrdinalIgnoreCase);
 
     private static void ApplyDocumentation(SsotDocument doc)
     {
@@ -711,6 +751,7 @@ public sealed class BlueprintCompiler
 
     private static bool IsButton(ControlInfo c) =>
         c.Type.Equals("Button", StringComparison.OrdinalIgnoreCase)
+        || c.Type.Equals("FloatingActionButton", StringComparison.OrdinalIgnoreCase)
         || c.Type.Equals("Command", StringComparison.OrdinalIgnoreCase)
         || c.Type.Equals("Cmdlet", StringComparison.OrdinalIgnoreCase)
         || c.Type.Equals("Endpoint", StringComparison.OrdinalIgnoreCase)
@@ -718,10 +759,14 @@ public sealed class BlueprintCompiler
 
     private static bool IsChoice(ControlInfo c) =>
         c.Type.Equals("ComboBox", StringComparison.OrdinalIgnoreCase)
+        || c.Type.Equals("DropdownMenu", StringComparison.OrdinalIgnoreCase)
+        || c.Type.Equals("ExposedDropdownMenu", StringComparison.OrdinalIgnoreCase)
         || c.Type.Equals("Option", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsList(ControlInfo c) =>
         c.Type.Equals("ListView", StringComparison.OrdinalIgnoreCase)
+        || c.Type.Equals("LazyColumn", StringComparison.OrdinalIgnoreCase)
+        || c.Type.Equals("RecyclerView", StringComparison.OrdinalIgnoreCase)
         || c.Type.Equals("DataGrid", StringComparison.OrdinalIgnoreCase)
         || c.Type.Equals("PipelineInput", StringComparison.OrdinalIgnoreCase);
 

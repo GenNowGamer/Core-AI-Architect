@@ -42,13 +42,14 @@ It helps you **describe what people see and do**. It compiles that into a struct
 7. **Project Blueprint** — review recommendations (with **Why?**), completeness, and detail level (Simple / Standard / Expert), **Check again**, then **Save** / **Export for AI agent** / **Export Agent Package**.
 8. Hand the `.ssot.json` or Agent Package folder (plus [SSOT_CONTRACT.md](SSOT_CONTRACT.md)) to your coding agent.
 
-Theme, navigation, architecture, storage details, and build targets are filled automatically unless you change them in Expert detail or by editing the JSON later. Expert detail also lets you set architecture/storage to **Recommended**, **Let coding agent decide** (`agent_discretion`), or **Choose myself**.
+Theme, navigation, architecture, storage details, and build targets are filled automatically unless you change them in Expert detail or by editing the JSON later. On Ad-Lib, **Look** (Modern / Professional / Simple) maps to the profile’s theme (for example Fluent on Windows, Material3 on Android). The Theme dropdown itself only appears when Blueprint hub **Detail level** is **Expert**. Expert detail also lets you set architecture/storage to **Recommended**, **Let coding agent decide** (`agent_discretion`), or **Choose myself**.
 
 ### App types (wizard cards)
 
 | Card | Profile behind it | Best for |
 |---|---|---|
 | Windows desktop app | `wpf_desktop` | Windows GUI (WPF) |
+| Android app | `android_app` | Phone/tablet apps (Jetpack Compose / Kotlin by default) |
 | Website / API | `web_api` | ASP.NET APIs |
 | Something else | `custom` | Flexible defaults |
 
@@ -98,10 +99,10 @@ The sections below describe the **exported App Blueprint** shape. In the wizard 
 
 | Option | Required? | What it means | Effect on the built app |
 |---|---|---|---|
-| **Target OS** | Yes | Where the app runs (e.g. Windows 11) | OS assumptions, APIs, packaging |
-| **Runtime** | Yes | Execution stack (e.g. .NET 8) | SDK / target framework |
-| **UI Framework** | Yes | Presentation tech (WPF, WinUI, Console, ASP.NET, …) | Project type and UI libraries |
-| **Language** | Yes | Primary language (C#, PowerShell, F#) | Language of generated code |
+| **Target OS** | Yes | Where the app runs (e.g. Windows 11, Android) | OS assumptions, APIs, packaging |
+| **Runtime** | Yes | Execution stack (e.g. .NET 8, Android Runtime) | SDK / target framework |
+| **UI Framework** | Yes | Presentation tech (WPF, Jetpack Compose, Console, ASP.NET, …) | Project type and UI libraries |
+| **Language** | Yes | Primary language (C#, Kotlin, PowerShell, …) | Language of generated code |
 
 ---
 
@@ -149,7 +150,7 @@ Rename the **Name people will see** so labels match your product. Internal ids a
 
 | Option | Required? | What it means | Effect on the built app |
 |---|---|---|---|
-| **Theme** | Yes | Visual style (Default, Fluent, Custom, …) | Styling approach (auto) |
+| **Theme** | Yes | Visual style (Fluent / Material3 / Default / Custom, by profile) | Styling approach — usually from Ad-Lib **Look**; override at Expert detail |
 | **Navigation Pattern** | Yes | How users move between surfaces | Shell pattern (auto) |
 | **Screens** | Strongly recommended | Each window/page/surface | Creates those views |
 | **Controls** (per screen) | Strongly recommended | Buttons, lists, inputs, etc. | Concrete UI elements and actions |
@@ -343,7 +344,7 @@ Empty product sections are **omitted** from Markdown export (no filler lorem ips
 5. **Remember** — only if you need History/Settings
 6. **Project Blueprint** — review recommendations + hub → Check again → Save / Export JSON / Export Agent Package
 
-Most environment, architecture, domain, constraints, build, testing, and documentation fields are filled automatically. Use Detail level **Expert** on the Blueprint hub to override theme, navigation, UI framework, language, and to set architecture/storage to Recommended, Let coding agent decide, or Choose myself.
+Most environment, architecture, domain, constraints, build, testing, and documentation fields are filled automatically. Use Detail level **Expert** on the Blueprint hub to override theme, navigation, UI framework, language, and to set architecture/storage to Recommended, Let coding agent decide, or Choose myself. Until Expert is selected, theme comes from Ad-Lib **Look** plus the app-type profile (you will not see a Theme control on Simple/Standard).
 
 ---
 

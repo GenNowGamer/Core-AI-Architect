@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Package</OutputType>
     <InstallerPlatform>x64</InstallerPlatform>
-    <PublishRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\CoreAiArchitect.App\bin\publish\win-x64'))</PublishRoot>
+    <PublishRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\artifacts\CoreAiArchitect'))</PublishRoot>
     <IconRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\Assets\Core-AI-Architect.ico'))</IconRoot>
     <DefineConstants>PublishDir=$(PublishRoot);IconFile=$(IconRoot)</DefineConstants>
   </PropertyGroup>

@@ -10,7 +10,14 @@ function Get-CommonSections {
         [string[]]$OutputTypes,
         [string[]]$Packaging,
         [string]$UiEditor = "uiBuilder",
-        [string]$UiLabel = "UI"
+        [string]$UiLabel = "UI",
+        [string[]]$TargetOsValues = @("Windows 11", "Windows 10", "Windows Server 2022", "Cross-Platform"),
+        [string[]]$RuntimeValues = @(".NET 8", ".NET 9", "PowerShell 7", "Native"),
+        [string[]]$UiFrameworkValues = @("WPF", "WinUI", "None", "ASP.NET", "Console", "PowerShell"),
+        [string[]]$LanguageValues = @("C#", "PowerShell", "F#"),
+        [string[]]$RuntimeIdentifiers = @("win-x64", "win-x86", "win-arm64", "portable"),
+        [string[]]$UnitTestFrameworks = @("xUnit", "NUnit", "MSTest", "Pester", "None"),
+        [string[]]$UiTestFrameworks = @("None", "FlaUI", "WinAppDriver", "Playwright")
     )
 
     function Convert-StringArray([string[]]$Items) {
@@ -25,6 +32,13 @@ function Get-CommonSections {
     $storageJson = Convert-StringArray $StorageTypes
     $outputJson = Convert-StringArray $OutputTypes
     $packJson = Convert-StringArray $Packaging
+    $targetOsJson = Convert-StringArray $TargetOsValues
+    $runtimeJson = Convert-StringArray $RuntimeValues
+    $uiFrameworkJson = Convert-StringArray $UiFrameworkValues
+    $languageJson = Convert-StringArray $LanguageValues
+    $ridJson = Convert-StringArray $RuntimeIdentifiers
+    $unitTestJson = Convert-StringArray $UnitTestFrameworks
+    $uiTestJson = Convert-StringArray $UiTestFrameworks
 
     return @"
     {
@@ -44,10 +58,10 @@ function Get-CommonSections {
       "label": "Environment",
       "editor": "default",
       "fields": [
-        { "id": "targetOs", "label": "Target OS", "path": "environment.targetOs", "type": "enum", "required": true, "values": ["Windows 11", "Windows 10", "Windows Server 2022", "Cross-Platform"] },
-        { "id": "runtime", "label": "Runtime", "path": "environment.runtime", "type": "enum", "required": true, "values": [".NET 8", ".NET 9", "PowerShell 7", "Native"] },
-        { "id": "uiFramework", "label": "UI Framework", "path": "environment.uiFramework", "type": "enum", "required": true, "values": ["WPF", "WinUI", "None", "ASP.NET", "Console", "PowerShell"] },
-        { "id": "language", "label": "Language", "path": "environment.language", "type": "enum", "required": true, "values": ["C#", "PowerShell", "F#"] }
+        { "id": "targetOs", "label": "Target OS", "path": "environment.targetOs", "type": "enum", "required": true, "values": $targetOsJson },
+        { "id": "runtime", "label": "Runtime", "path": "environment.runtime", "type": "enum", "required": true, "values": $runtimeJson },
+        { "id": "uiFramework", "label": "UI Framework", "path": "environment.uiFramework", "type": "enum", "required": true, "values": $uiFrameworkJson },
+        { "id": "language", "label": "Language", "path": "environment.language", "type": "enum", "required": true, "values": $languageJson }
       ]
     },
     {
@@ -194,7 +208,7 @@ function Get-CommonSections {
           "required": false,
           "itemSchema": [
             { "id": "name", "label": "Name", "path": "name", "type": "string", "required": true },
-            { "id": "runtimeIdentifier", "label": "Runtime Identifier", "path": "runtimeIdentifier", "type": "enum", "required": true, "values": ["win-x64", "win-x86", "win-arm64", "portable"] }
+            { "id": "runtimeIdentifier", "label": "Runtime Identifier", "path": "runtimeIdentifier", "type": "enum", "required": true, "values": $ridJson }
           ]
         }
       ]
@@ -213,8 +227,8 @@ function Get-CommonSections {
       "label": "Testing",
       "editor": "default",
       "fields": [
-        { "id": "unitTestFramework", "label": "Unit Test Framework", "path": "testing.unitTestFramework", "type": "enum", "required": true, "values": ["xUnit", "NUnit", "MSTest", "Pester", "None"] },
-        { "id": "uiTestFramework", "label": "UI Test Framework", "path": "testing.uiTestFramework", "type": "enum", "required": true, "values": ["None", "FlaUI", "WinAppDriver", "Playwright"] },
+        { "id": "unitTestFramework", "label": "Unit Test Framework", "path": "testing.unitTestFramework", "type": "enum", "required": true, "values": $unitTestJson },
+        { "id": "uiTestFramework", "label": "UI Test Framework", "path": "testing.uiTestFramework", "type": "enum", "required": true, "values": $uiTestJson },
         { "id": "coverageTarget", "label": "Coverage Target", "path": "testing.coverageTarget", "type": "number", "required": true }
       ]
     },
@@ -246,6 +260,20 @@ $profiles = @(
         arch = @("MVVM", "MVC", "CleanArchitecture"); themes = @("Default", "Fluent", "Custom"); nav = @("Window+Dialogs", "NavigationFrame", "Tabbed")
         controls = @("Button", "TextBox", "DataGrid", "ListView", "MenuItem", "ComboBox", "CheckBox"); storage = @("None", "SQLite", "SQLServer", "LocalJson")
         output = @("WinExe", "Exe"); packaging = @("None", "MSIX", "Zip"); uiEditor = "uiBuilder"; uiLabel = "UI"
+    },
+    @{
+        id = "android_app"; label = "Android App"
+        env = @{ targetOs = "Android"; runtime = "Android Runtime"; uiFramework = "Jetpack Compose"; language = "Kotlin" }
+        targetOsValues = @("Android")
+        runtimeValues = @("Android Runtime", ".NET 8", ".NET 9")
+        uiFrameworkValues = @("Jetpack Compose", "Android Views", ".NET MAUI")
+        languageValues = @("Kotlin", "Java", "C#")
+        arch = @("MVVM", "CleanArchitecture", "MVI"); themes = @("Material3", "Material", "Custom"); nav = @("BottomNavigation", "NavigationCompose", "SingleActivity", "Tabbed")
+        controls = @("Button", "TextField", "OutlinedTextField", "DropdownMenu", "LazyColumn", "RecyclerView", "CheckBox", "FloatingActionButton"); storage = @("None", "SQLite", "Room", "DataStore", "LocalJson")
+        output = @("Aab", "Apk", "Library"); packaging = @("None", "AAB", "APK", "PlayStore")
+        runtimeIdentifiers = @("android-arm64", "android-x64", "android-x86", "portable")
+        unitTestFrameworks = @("JUnit", "xUnit", "None"); uiTestFrameworks = @("None", "Espresso", "ComposeUiTest")
+        uiEditor = "uiBuilder"; uiLabel = "UI"
     },
     @{
         id = "winpe_tool"; label = "WinPE Tool"
@@ -285,15 +313,43 @@ $profiles = @(
     @{
         id = "custom"; label = "Custom"
         env = @{ targetOs = "Windows 11"; runtime = ".NET 8"; uiFramework = "WPF"; language = "C#" }
-        arch = @("MVVM", "MVC", "CleanArchitecture", "Modular", "Custom"); themes = @("Default", "Fluent", "Custom"); nav = @("Window+Dialogs", "NavigationFrame", "Tabbed", "HttpRoutes", "CommandLine", "Custom")
-        controls = @("Button", "TextBox", "DataGrid", "ListView", "MenuItem", "ComboBox", "CheckBox", "Endpoint", "Command", "Cmdlet", "Custom"); storage = @("None", "SQLite", "SQLServer", "PostgreSQL", "LocalJson", "Registry")
-        output = @("WinExe", "Exe", "Library"); packaging = @("None", "MSIX", "Zip", "Docker", "DotnetTool", "PSGallery", "WinPEMedia"); uiEditor = "uiBuilder"; uiLabel = "UI"
+        targetOsValues = @("Windows 11", "Windows 10", "Windows Server 2022", "Android", "Cross-Platform")
+        runtimeValues = @(".NET 8", ".NET 9", "PowerShell 7", "Android Runtime", "Native")
+        uiFrameworkValues = @("WPF", "WinUI", "Jetpack Compose", "Android Views", ".NET MAUI", "None", "ASP.NET", "Console", "PowerShell")
+        languageValues = @("C#", "PowerShell", "F#", "Kotlin", "Java")
+        arch = @("MVVM", "MVC", "CleanArchitecture", "MVI", "Modular", "Custom"); themes = @("Default", "Fluent", "Material3", "Material", "Custom")
+        nav = @("Window+Dialogs", "NavigationFrame", "Tabbed", "BottomNavigation", "NavigationCompose", "SingleActivity", "HttpRoutes", "CommandLine", "Custom")
+        controls = @("Button", "TextBox", "TextField", "DataGrid", "ListView", "LazyColumn", "MenuItem", "ComboBox", "DropdownMenu", "CheckBox", "Endpoint", "Command", "Cmdlet", "Custom")
+        storage = @("None", "SQLite", "SQLServer", "PostgreSQL", "Room", "DataStore", "LocalJson", "Registry")
+        output = @("WinExe", "Exe", "Library", "Aab", "Apk"); packaging = @("None", "MSIX", "Zip", "Docker", "DotnetTool", "PSGallery", "WinPEMedia", "AAB", "APK", "PlayStore")
+        runtimeIdentifiers = @("win-x64", "win-x86", "win-arm64", "android-arm64", "android-x64", "portable")
+        unitTestFrameworks = @("xUnit", "NUnit", "MSTest", "Pester", "JUnit", "None")
+        uiTestFrameworks = @("None", "FlaUI", "WinAppDriver", "Playwright", "Espresso", "ComposeUiTest")
+        uiEditor = "uiBuilder"; uiLabel = "UI"
     }
 )
 
 foreach ($p in $profiles) {
-    $sections = Get-CommonSections -ArchPatterns $p.arch -UiThemes $p.themes -NavPatterns $p.nav -ControlTypes $p.controls `
-        -StorageTypes $p.storage -OutputTypes $p.output -Packaging $p.packaging -UiEditor $p.uiEditor -UiLabel $p.uiLabel
+    $sectionArgs = @{
+        ArchPatterns = $p.arch
+        UiThemes = $p.themes
+        NavPatterns = $p.nav
+        ControlTypes = $p.controls
+        StorageTypes = $p.storage
+        OutputTypes = $p.output
+        Packaging = $p.packaging
+        UiEditor = $p.uiEditor
+        UiLabel = $p.uiLabel
+    }
+    if ($p.ContainsKey("targetOsValues")) { $sectionArgs.TargetOsValues = $p.targetOsValues }
+    if ($p.ContainsKey("runtimeValues")) { $sectionArgs.RuntimeValues = $p.runtimeValues }
+    if ($p.ContainsKey("uiFrameworkValues")) { $sectionArgs.UiFrameworkValues = $p.uiFrameworkValues }
+    if ($p.ContainsKey("languageValues")) { $sectionArgs.LanguageValues = $p.languageValues }
+    if ($p.ContainsKey("runtimeIdentifiers")) { $sectionArgs.RuntimeIdentifiers = $p.runtimeIdentifiers }
+    if ($p.ContainsKey("unitTestFrameworks")) { $sectionArgs.UnitTestFrameworks = $p.unitTestFrameworks }
+    if ($p.ContainsKey("uiTestFrameworks")) { $sectionArgs.UiTestFrameworks = $p.uiTestFrameworks }
+
+    $sections = Get-CommonSections @sectionArgs
 
     $json = @"
 {

@@ -67,6 +67,23 @@ Applies today to:
 | `multiDevice` | `no` \| `yes` \| `later` |
 | `notifications` | boolean + optional `notificationNotes` |
 
+## Android profile (`android_app`)
+
+When `environment.targetOs` is `Android` (or the blueprint was authored with the Android app card):
+
+| Field | Typical values |
+|---|---|
+| `environment.runtime` | `Android Runtime` (native), or `.NET 8` / `.NET 9` for MAUI |
+| `environment.uiFramework` | `Jetpack Compose` (default), `Android Views`, `.NET MAUI` |
+| `environment.language` | `Kotlin` (default), `Java`, `C#` |
+| `ui.theme` | `Material3` / `Material` / `Custom` |
+| `ui.navigationPattern` | `BottomNavigation`, `NavigationCompose`, `SingleActivity`, `Tabbed` |
+| `build.outputType` | `Aab` / `Apk` / `Library` |
+| `deployment.packaging` | `AAB` / `APK` / `PlayStore` / `None` |
+| `testing` | Prefer `JUnit` + `ComposeUiTest` or `Espresso` |
+
+Map beginner wizard controls to Compose/Android widgets (`TextField`, `DropdownMenu`, `LazyColumn`, `Button`, etc.) as listed in `ui.screens`. Respect `requirements.notifications` for notification permission / channels.
+
 ## Generic domain scaffolds (Core AI Architect wizard)
 
 When `domain.entities` use generic names such as `OptionChoice`, `UserInput`, `ResultItem`, `HistoryEntry`, or `AppSettings`, and entity descriptions contain **Scaffold only**:

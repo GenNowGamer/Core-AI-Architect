@@ -1,0 +1,16 @@
+<Project>
+  <!--
+    Repo-wide MSBuild defaults.
+
+    Canonical runnable/shippable WPF app output (after `dotnet publish`):
+      artifacts/CoreAiArchitect/
+
+    bin/ and obj/ under each project are disposable compile intermediates.
+    Do not treat those copies as the app to run or distribute.
+  -->
+  <PropertyGroup>
+    <RepoRoot>$(MSBuildThisFileDirectory)</RepoRoot>
+    <CoreAiArchitectPublishDir>$([System.IO.Path]::GetFullPath('$(RepoRoot)artifacts\CoreAiArchitect'))</CoreAiArchitectPublishDir>
+    <CoreAiArchitectFrameworkDependentPublishDir>$([System.IO.Path]::GetFullPath('$(RepoRoot)artifacts\CoreAiArchitect-fd'))</CoreAiArchitectFrameworkDependentPublishDir>
+  </PropertyGroup>
+</Project>

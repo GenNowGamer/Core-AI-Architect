@@ -1,6 +1,6 @@
 # Session handoff — Core AI Architect
 
-**Last updated:** 2026-09-03  
+**Last updated:** 2026-09-08  
 **Workspace:** `d:\Robert\Desktop\App Project Builds\Core_AI_Architect`  
 **Product:** Core AI Architect (App Blueprint / SSOT authoring tool for AI coding agents)
 
@@ -8,7 +8,37 @@ Use this file for current-state / continuity context. Operator build/run basics 
 
 ---
 
-## What shipped this session (2026-09-03)
+## What shipped this session (2026-09-08)
+
+Android App Blueprint profile plus a single canonical publish folder for the runnable exe.
+
+| Change | Detail |
+|---|---|
+| **`android_app` profile** | New schema (`schemas/android_app.json`), wizard card, compiler/compat/recommendation defaults (Jetpack Compose / Kotlin / Material3 / BottomNavigation / AAB). Regenerated via `tools/GenerateSchemas.ps1` (per-profile env enums). |
+| **Agent / user docs** | [SSOT_CONTRACT.md](docs/SSOT_CONTRACT.md) Android section; [USER_GUIDE.md](docs/USER_GUIDE.md) app-type table; [README.md](README.md) profiles list; HelpCatalog Ad-Lib blurb. |
+| **Canonical publish** | `Directory.Build.props` → `artifacts/CoreAiArchitect/`. `Win64-SelfContained` + App `PublishDir`, WiX `PublishRoot`, `tools/Publish-App.ps1`. Folder installer prefers artifacts; `stage_payload.ps1` only for optional installer zip. |
+| **Cleanup** | Removed obsolete `bin/publish`, RID publish intermediate, and `installer/payload` copies (regenerable). |
+
+Primary new/updated files: `Directory.Build.props`, `schemas/android_app.json`, `tools/Publish-App.ps1`, `GenerateSchemas.ps1`, wizard/compiler/compat/recommendation/factory/tests, publish profiles, installer scripts, docs above.
+
+### Verify
+
+```powershell
+dotnet build CoreAiArchitect.sln -c Release
+dotnet test  CoreAiArchitect.sln -c Release
+powershell -File tools\Publish-App.ps1
+# Run: artifacts\CoreAiArchitect\CoreAiArchitect.exe
+```
+
+Last check this session: build succeeded; **39** tests passed; publish wrote canonical artifacts folder.
+
+### Open (not fixed this session)
+
+Ready-check can falsely reject Android **Material3** theme: `CompatibilityEngine.EvaluateDocument` validates themes without the active profile, so it falls back to Windows `Default` / `Fluent` / `Custom`. Theme is Expert-only in the UI (Ad-Lib **Look** drives it). Fix: pass profile into document compatibility evaluation (or Android-aware theme fallback).
+
+---
+
+## What shipped previously (2026-09-03)
 
 App icon integration and MSI installer for end-user distribution.
 
@@ -25,12 +55,12 @@ Primary new/updated files: `Assets/*`, `CoreAiArchitect.App.csproj`, `CoreAiArch
 ### Build the MSI
 
 ```powershell
-dotnet publish src/CoreAiArchitect.App/CoreAiArchitect.App.csproj -c Release -p:PublishProfile=Win64-SelfContained
+powershell -File tools\Publish-App.ps1
 dotnet build src/CoreAiArchitect.Installer/CoreAiArchitect.Installer.wixproj -c Release
 # Output: src/CoreAiArchitect.Installer/bin/Release/CoreAiArchitect.Installer.msi
 ```
 
-Last check this session: MSI built successfully, user-tested and confirmed working.
+Last check that session: MSI built successfully, user-tested and confirmed working.
 
 ---
 
@@ -68,11 +98,11 @@ Self-contained **Windows x64 exe** so Core AI Architect can be opened without `d
 | Change | Detail |
 |---|---|
 | **Publish profile** | `src/CoreAiArchitect.App/Properties/PublishProfiles/Win64-SelfContained.pubxml` — Release, `win-x64`, self-contained, ReadyToRun |
-| **Output** | `src/CoreAiArchitect.App/bin/publish/win-x64/CoreAiArchitect.exe` (keep the whole folder; includes `schemas\`) |
-| **Desktop shortcut** | `%USERPROFILE%\Desktop\Core AI Architect.lnk` → that exe, working directory = publish folder |
+| **Output** | `artifacts/CoreAiArchitect/CoreAiArchitect.exe` (canonical; keep the whole folder; includes `schemas\`) |
+| **Desktop shortcut** | Point at that exe; working directory = `artifacts/CoreAiArchitect/` |
 
 ```powershell
-dotnet publish src/CoreAiArchitect.App/CoreAiArchitect.App.csproj -c Release -p:PublishProfile=Win64-SelfContained
+powershell -File tools\Publish-App.ps1
 ```
 
 ---
@@ -96,7 +126,8 @@ Bugfixes from that session: Open wipe, menu contrast, Back→Next document prese
 
 **Wizard flow:** Ad-Lib → Needs → Screens → Clicks → Remember → Project Blueprint hub.
 
-- Novices stay in plain language; Expert detail exposes stack + decision modes.
+- Wizard cards include **Windows desktop**, **Android**, **Website / API**, and **Something else** (other profiles via schemas / PowerShell).
+- Novices stay in plain language; Ad-Lib **Look** maps to theme (e.g. Fluent vs Material3). **Theme** dropdown is Expert-only on the Blueprint hub.
 - Technical defaults (OS, language, theme, navigation, architecture, build/test) still come from the form profile + rules.
 - Older section-editor / UI Layout Builder views remain in the project but are **not** the active MainWindow flow.
 
@@ -124,7 +155,7 @@ cd "d:\Robert\Desktop\App Project Builds\Core_AI_Architect"
 dotnet build CoreAiArchitect.sln -c Release
 dotnet test  CoreAiArchitect.sln -c Release
 dotnet run --project src/CoreAiArchitect.App/CoreAiArchitect.App.csproj -c Release
-# Or open the published exe / Desktop shortcut (see README)
+# Or: powershell -File tools\Publish-App.ps1  →  artifacts\CoreAiArchitect\CoreAiArchitect.exe
 ```
 
 PowerShell module (requires **PowerShell 7+** / `pwsh`):
@@ -159,23 +190,26 @@ File at repo root (user-authored, **not** a product sample):
 
 ## Known tooling notes
 
-- Schema JSON is generated via `tools/GenerateSchemas.ps1` (avoids PowerShell single-element array collapse).
-- **MSI installer** (`src/CoreAiArchitect.Installer/`) is the recommended distribution format. Requires WiX v5 CLI: `dotnet tool install --global wix`. The `.wixproj` is in the solution but excluded from default build.
-- MSIX project (`src/CoreAiArchitect.Package/`) is **outside** the default solution build; see `src/CoreAiArchitect.Package/README.md`.
-- `installer/` folder contains PowerShell-based install/uninstall scripts as an alternative to the MSI. `installer/payload/` is gitignored (large binaries — regenerate via `stage_payload.ps1`).
+- Schema JSON is generated via `tools/GenerateSchemas.ps1` (avoids PowerShell single-element array collapse; supports per-profile environment enums).
+- **Canonical runnable app:** `artifacts/CoreAiArchitect/` after `tools/Publish-App.ps1` (see `Directory.Build.props`). Treat `bin/` / `obj/` as disposable intermediates.
+- **MSI installer** (`src/CoreAiArchitect.Installer/`) is the recommended distribution format. Requires WiX v5 CLI: `dotnet tool install --global wix`. The `.wixproj` is in the solution but excluded from default build. MSI harvests from `artifacts/CoreAiArchitect/`.
+- MSIX project (`src/CoreAiArchitect.Package/`) is **outside** the default solution build; framework-dependent helper publish goes to `artifacts/CoreAiArchitect-fd/` (`Win32.pubxml`). See `src/CoreAiArchitect.Package/README.md`.
+- `installer/` folder contains PowerShell-based install/uninstall scripts as an alternative to the MSI. Prefer artifacts; optional `stage_payload.ps1` copies into gitignored `installer/payload/` for a standalone installer zip.
 - App icon assets live in `Assets/` — `.ico` for the WPF exe, PNGs for MSIX tiles.
-- Everyday launch path is the self-contained folder publish (`Win64-SelfContained`), the MSI install, or `dotnet run`. Do not copy `CoreAiArchitect.exe` out of its folder by itself.
+- Everyday launch path is the canonical artifacts publish, the MSI install, or `dotnet run`. Do not copy `CoreAiArchitect.exe` out of its folder by itself.
 - Git repo is initialized in this workspace.
 - User-guide **PDF** may be missing or stale relative to [docs/USER_GUIDE.md](docs/USER_GUIDE.md) — regenerate when needed.
+- **Android ready-check:** Material3 may falsely fail until `EvaluateDocument` is profile-aware (see Open note above).
 
 ---
 
 ## Suggested next steps
 
-1. Regenerate user-guide PDF from [docs/USER_GUIDE.md](docs/USER_GUIDE.md) (`python tools/GenerateUserGuidePdf.py`).
-2. Code-sign the MSI with an Authenticode certificate for trusted distribution.
-3. Optionally re-author lottery blueprint through Ad-Lib → Needs → hub, then export Agent Package for a coding agent.
-4. Install PowerShell 7 if module smoke-testing is needed on this machine.
+1. Fix Android Material3 false failure in `CompatibilityEngine.EvaluateDocument` / `RunReadyCheck` (pass active profile or Android theme fallback).
+2. Regenerate user-guide PDF from [docs/USER_GUIDE.md](docs/USER_GUIDE.md) (`python tools/GenerateUserGuidePdf.py`).
+3. Code-sign the MSI with an Authenticode certificate for trusted distribution.
+4. Optionally re-author lottery blueprint through Ad-Lib → Needs → hub, then export Agent Package for a coding agent.
+5. Install PowerShell 7 if module smoke-testing is needed on this machine.
 
 ---
 
@@ -183,7 +217,7 @@ File at repo root (user-authored, **not** a product sample):
 
 | Doc | Role |
 |---|---|
-| [README.md](README.md) | Product overview, build/run, self-contained exe publish, profiles, module import |
+| [README.md](README.md) | Product overview, build/run, canonical `artifacts/` publish, profiles, module import |
 | [docs/Core_AI_Architect_User_Guide.pdf](docs/Core_AI_Architect_User_Guide.pdf) | End-user guide (PDF) — regenerate from USER_GUIDE.md after guide edits |
 | [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Markdown source for the user guide PDF |
 | [session_handoff.md](session_handoff.md) | This file — session continuity and open work |

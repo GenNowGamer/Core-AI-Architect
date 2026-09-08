@@ -55,6 +55,7 @@ public sealed class CompatibilityEngine
         var result = Evaluate(answers);
         EvaluateTriggerBindings(document, result);
         EvaluateDesktopPlaywright(document, result);
+        EvaluateAndroidDesktopTests(document, result);
         return result;
     }
 
@@ -72,12 +73,16 @@ public sealed class CompatibilityEngine
         {
             "wpf" => new[] { "Window+Dialogs", "NavigationFrame", "Tabbed" },
             "winui" => new[] { "NavigationFrame", "Tabbed" },
+            "jetpack compose" => new[] { "BottomNavigation", "NavigationCompose", "SingleActivity", "Tabbed" },
+            "android views" => new[] { "BottomNavigation", "SingleActivity", "Tabbed" },
+            ".net maui" => new[] { "BottomNavigation", "Tabbed", "SingleActivity" },
             "asp.net" => new[] { "HttpRoutes" },
             "console" => new[] { "CommandLine" },
             "powershell" => new[] { "CmdletPipeline" },
             "none" => new[] { "Custom" },
             _ => profileId switch
             {
+                "android_app" => new[] { "BottomNavigation", "NavigationCompose", "SingleActivity", "Tabbed" },
                 "winpe_tool" => new[] { "Wizard", "CommandLine", "Menu" },
                 "deployment_automation" => new[] { "Pipeline" },
                 _ => new[] { "Window+Dialogs", "Custom" }
@@ -116,13 +121,40 @@ public sealed class CompatibilityEngine
         if (answers.Language.Equals("PowerShell", StringComparison.OrdinalIgnoreCase)
             && (answers.UiFramework.Equals("WPF", StringComparison.OrdinalIgnoreCase)
                 || answers.UiFramework.Equals("WinUI", StringComparison.OrdinalIgnoreCase)
+                || answers.UiFramework.Equals("ASP.NET", StringComparison.OrdinalIgnoreCase)
+                || answers.UiFramework.Equals("Jetpack Compose", StringComparison.OrdinalIgnoreCase)
+                || answers.UiFramework.Equals("Android Views", StringComparison.OrdinalIgnoreCase)))
+        {
+            result.Issues.Add(new CompatibilityIssue
+            {
+                Message = "PowerShell language does not mix with a desktop, web, or Android UI framework.",
+                SuggestedFix = "Pick the PowerShell module app kind, or switch language to C# / Kotlin.",
+                AllowedAlternatives = new[] { "Change language to C#", "Change language to Kotlin", "Choose PowerShell module app kind" }
+            });
+        }
+
+        if ((answers.Language.Equals("Kotlin", StringComparison.OrdinalIgnoreCase)
+             || answers.Language.Equals("Java", StringComparison.OrdinalIgnoreCase))
+            && (answers.UiFramework.Equals("WPF", StringComparison.OrdinalIgnoreCase)
+                || answers.UiFramework.Equals("WinUI", StringComparison.OrdinalIgnoreCase)
                 || answers.UiFramework.Equals("ASP.NET", StringComparison.OrdinalIgnoreCase)))
         {
             result.Issues.Add(new CompatibilityIssue
             {
-                Message = "PowerShell language does not mix with a desktop or web UI framework.",
-                SuggestedFix = "Pick the PowerShell module app kind, or switch language to C#.",
-                AllowedAlternatives = new[] { "Change language to C#", "Choose PowerShell module app kind" }
+                Message = "Kotlin/Java language does not mix with Windows desktop or ASP.NET UI frameworks.",
+                SuggestedFix = "Choose the Android app kind, or switch language to C#.",
+                AllowedAlternatives = new[] { "Choose Android app kind", "Change language to C#" }
+            });
+        }
+
+        if (answers.ProfileId.Equals("android_app", StringComparison.OrdinalIgnoreCase)
+            && !IsAndroidUi(answers.UiFramework))
+        {
+            result.Issues.Add(new CompatibilityIssue
+            {
+                Message = "An Android app should use an Android UI framework.",
+                SuggestedFix = "Use Jetpack Compose, Android Views, or .NET MAUI.",
+                AllowedAlternatives = new[] { "Jetpack Compose", "Android Views", ".NET MAUI" }
             });
         }
 
@@ -138,6 +170,11 @@ public sealed class CompatibilityEngine
             });
         }
     }
+
+    private static bool IsAndroidUi(string uiFramework) =>
+        uiFramework.Equals("Jetpack Compose", StringComparison.OrdinalIgnoreCase)
+        || uiFramework.Equals("Android Views", StringComparison.OrdinalIgnoreCase)
+        || uiFramework.Equals(".NET MAUI", StringComparison.OrdinalIgnoreCase);
 
     private void EvaluateNavigation(WizardAnswers answers, FormSchemaDefinition? profile, CompatibilityResult result)
     {
@@ -251,6 +288,28 @@ public sealed class CompatibilityEngine
                 Message = "Playwright is for websites, not desktop window apps.",
                 SuggestedFix = "Use FlaUI, WinAppDriver, or None.",
                 AllowedAlternatives = new[] { "None", "FlaUI", "WinAppDriver" }
+            });
+        }
+    }
+
+    private static void EvaluateAndroidDesktopTests(SsotDocument document, CompatibilityResult result)
+    {
+        var ui = document.Environment.UiFramework;
+        var isAndroid = ui.Equals("Jetpack Compose", StringComparison.OrdinalIgnoreCase)
+                        || ui.Equals("Android Views", StringComparison.OrdinalIgnoreCase)
+                        || ui.Equals(".NET MAUI", StringComparison.OrdinalIgnoreCase);
+        if (!isAndroid) return;
+
+        var framework = document.Testing.UiTestFramework;
+        if (framework.Equals("FlaUI", StringComparison.OrdinalIgnoreCase)
+            || framework.Equals("WinAppDriver", StringComparison.OrdinalIgnoreCase)
+            || framework.Equals("Playwright", StringComparison.OrdinalIgnoreCase))
+        {
+            result.Issues.Add(new CompatibilityIssue
+            {
+                Message = "Windows or web UI test frameworks do not apply to Android apps.",
+                SuggestedFix = "Use Espresso, ComposeUiTest, or None.",
+                AllowedAlternatives = new[] { "None", "Espresso", "ComposeUiTest" }
             });
         }
     }

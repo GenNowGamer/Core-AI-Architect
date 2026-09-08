@@ -55,7 +55,7 @@ public static class HelpCatalog
             """
             This is the product brief an AI coding agent will read first.
 
-            • App type — Windows desktop is the usual choice for home/office tools.
+            • App type — Windows desktop, Android, Website/API, or Something else.
             • Ad-Lib — who it is for, what it helps them do, main capabilities (one per line), online/offline, look.
             • Product rules — game lists, number rules, validation, caching. You do not design database tables here.
             • Templates — Number / lottery picker is a good starting shape for ticket/number apps. On a blank start, ad-lib capabilities become starter buttons.
