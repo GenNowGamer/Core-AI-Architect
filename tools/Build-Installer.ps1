@@ -28,3 +28,4 @@ if (Test-Path $sourceMsi) {
 } else {
     throw "MSI build completed but output file not found at $sourceMsi"
 }
+

@@ -7,6 +7,14 @@ $repo = Split-Path -Parent $PSScriptRoot
 $project = Join-Path $repo 'src\CoreAiArchitect.App\CoreAiArchitect.App.csproj'
 $outDir = Join-Path $repo 'artifacts\CoreAiArchitect'
 
+# Stop running app instances so DLLs are not locked during compilation/copy
+$running = Get-Process -Name 'CoreAiArchitect' -ErrorAction SilentlyContinue
+if ($running) {
+    Write-Host "Closing running instance of Core AI Architect..." -ForegroundColor Yellow
+    $running | Stop-Process -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Milliseconds 800
+}
+
 Write-Host "Publishing Core AI Architect -> $outDir"
 dotnet publish $project -c Release -p:PublishProfile=Win64-SelfContained
 if ($LASTEXITCODE -ne 0) {
