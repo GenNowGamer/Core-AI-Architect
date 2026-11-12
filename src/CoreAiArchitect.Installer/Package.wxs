@@ -3,7 +3,7 @@
   <Package
     Name="Core AI Architect"
     Manufacturer="Coresynth Studios"
-    Version="1.0.0.0"
+    Version="$(var.AppVersion)"
     UpgradeCode="A3C7E1B9-4F82-4D6A-9E15-7B3D0C8F2A64"
     Scope="perMachine"
     InstallerVersion="500"
