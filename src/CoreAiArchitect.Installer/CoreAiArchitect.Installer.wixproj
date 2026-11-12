@@ -3,9 +3,10 @@
   <PropertyGroup>
     <OutputType>Package</OutputType>
     <InstallerPlatform>x64</InstallerPlatform>
+    <AppVersion>1.1.0.0</AppVersion>
     <PublishRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\artifacts\CoreAiArchitect'))</PublishRoot>
     <IconRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\Assets\Core-AI-Architect.ico'))</IconRoot>
-    <DefineConstants>PublishDir=$(PublishRoot);IconFile=$(IconRoot)</DefineConstants>
+    <DefineConstants>PublishDir=$(PublishRoot);IconFile=$(IconRoot);AppVersion=$(AppVersion)</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
