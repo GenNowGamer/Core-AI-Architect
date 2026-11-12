@@ -10,6 +10,15 @@
 
 Windows 11 desktop tool that authors a canonical JSON **App Blueprint** (SSOT — single source of truth) for AI coding agents.
 
+### 📥 Downloads
+
+| Platform | Format | Description | Direct Download |
+| :--- | :--- | :--- | :--- |
+| **Windows PC** | Standalone Windows Installer (`.msi`) | Windows 10 & 11 (64-bit) — Full self-contained desktop setup | [**Download for PC (.msi)**](https://github.com/GenNowGamer/Core-AI-Architect/releases/latest/download/CoreAiArchitect-Setup.msi) |
+| **Windows Portable** | Self-Contained Executable (`.exe`) | Run without installing — Portable x64 folder | [**View Release Assets**](https://github.com/GenNowGamer/Core-AI-Architect/releases/latest) |
+
+---
+
 ## What it does
 
 1. Fill a **guided Ad-Lib** (who it’s for, what it helps them do, main capabilities) plus optional product rules / starter templates (Blank, Master-Detail / Catalog, Dashboard & Analytics, File / Batch Processor, Simple form, List + save history)
