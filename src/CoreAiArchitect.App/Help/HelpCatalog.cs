@@ -58,7 +58,7 @@ public static class HelpCatalog
             • App type — Windows desktop, Android, Website/API, or Something else.
             • Ad-Lib — who it is for, what it helps them do, main capabilities (one per line), online/offline, look.
             • Product rules — game lists, number rules, validation, caching. You do not design database tables here.
-            • Templates — Number / lottery picker is a good starting shape for ticket/number apps. On a blank start, ad-lib capabilities become starter buttons.
+            • Templates — Simple form or List + save history provide quick starting shapes. On a blank start, ad-lib capabilities become starter buttons.
 
             Domain entities in the exported JSON stay generic on purpose. Rich rules belong in the ad-lib / product rules and later click steps.
             """);

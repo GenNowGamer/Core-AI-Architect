@@ -1,3 +1,5 @@
+using System.IO;
+using Path = System.IO.Path;
 using CoreAiArchitect.Core.Documents;
 using CoreAiArchitect.Core.Export;
 using CoreAiArchitect.Core.Models.Ssot;
@@ -255,7 +257,7 @@ public class ValidationAndExportTests
         Assert.NotNull(doc.Domain.Entities);
         Assert.NotNull(doc.Workflows[0].Steps);
         Assert.NotNull(doc.Workflows[0].ErrorHandling);
-        Assert.Equal("1.0.0", doc.SsotVersion);
+        Assert.Equal(SsotDocument.CurrentSchemaVersion, doc.SsotVersion);
     }
 
     [Fact]
@@ -500,6 +502,35 @@ public class WizardBuilderTests
         Assert.All(doc.Domain.Entities, e =>
             Assert.Contains(DomainScaffoldPolicy.ScaffoldMarker, e.Description, StringComparison.OrdinalIgnoreCase));
 
+        var ready = new SsotReadinessEngine().Assess(doc, profile);
+        Assert.True(ready.IsValid, string.Join("; ", ready.Errors.Select(e => e.Message)));
+    }
+
+    [Theory]
+    [InlineData("master_detail")]
+    [InlineData("dashboard")]
+    [InlineData("batch_processor")]
+    public void BlueprintTemplates_NewTemplates_CompileAndPassReadiness(string templateId)
+    {
+        var catalog = new SchemaCatalog();
+        catalog.LoadFromDirectory(SchemasDir);
+        var profile = catalog.RequireById("wpf_desktop");
+        var answers = new WizardAnswers
+        {
+            ProfileId = "wpf_desktop",
+            ProjectName = "Template Test Project",
+            Description = "Automated test validating new template compile and readiness."
+        };
+        var compat = new CompatibilityEngine();
+        compat.ApplySafeDefaults(answers, profile);
+
+        var compiler = new BlueprintCompiler();
+        var doc = compiler.BuildNew(answers, profile, seedMainScreen: false);
+        BlueprintTemplates.Apply(templateId, doc, profile);
+        doc = compiler.Compile(doc, answers, profile);
+
+        Assert.NotEmpty(doc.Ui.Screens);
+        Assert.NotEmpty(doc.Workflows);
         var ready = new SsotReadinessEngine().Assess(doc, profile);
         Assert.True(ready.IsValid, string.Join("; ", ready.Errors.Select(e => e.Message)));
     }

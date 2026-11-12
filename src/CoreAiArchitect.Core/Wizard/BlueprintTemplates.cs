@@ -11,8 +11,12 @@ public static class BlueprintTemplates
     public static IReadOnlyList<TemplateInfo> All { get; } = new[]
     {
         new TemplateInfo("blank", "Start blank", "One empty main screen — you add everything yourself."),
-        new TemplateInfo("lottery", "Number / lottery picker",
-            "Pick a game, type how many tickets, press Generate, see results on one screen."),
+        new TemplateInfo("master_detail", "Master-Detail / Catalog",
+            "Browse a list of items with category filters, view details, and edit entries."),
+        new TemplateInfo("dashboard", "Dashboard & Analytics",
+            "Key metric summaries, time filters, quick actions, and recent activity records."),
+        new TemplateInfo("batch_processor", "File / Batch Processor",
+            "Queue files or items, select processing presets and destination, and run batch jobs."),
         new TemplateInfo("simple_form", "Simple form",
             "A few places to type plus a Submit button."),
         new TemplateInfo("list_history", "List + save history",
@@ -26,6 +30,15 @@ public static class BlueprintTemplates
 
         switch (templateId)
         {
+            case "master_detail":
+                ApplyMasterDetail(doc, types);
+                break;
+            case "dashboard":
+                ApplyDashboard(doc, types);
+                break;
+            case "batch_processor":
+                ApplyBatchProcessor(doc, types);
+                break;
             case "lottery":
                 ApplyLottery(doc, types);
                 break;
@@ -49,12 +62,6 @@ public static class BlueprintTemplates
 
         var text = description.ToLowerInvariant();
         var tips = new List<string>();
-
-        if (ContainsAny(text, "lottery", "lotto", "ticket", "powerball", "mega millions", "game"))
-            tips.Add("This sounds like a number/lottery picker — try the “Number / lottery picker” template.");
-
-        if (ContainsAny(text, "rule", "ball", "fireball", "range", "cache", "illinois"))
-            tips.Add("Good — keep game rules and caching notes in this description; click steps should reference them.");
 
         if (ContainsAny(text, "generate", "create", "make numbers"))
             tips.Add("Add a Button named Generate and a Results list on the same screen.");
@@ -182,6 +189,166 @@ public static class BlueprintTemplates
         save.Action = "SaveHistory";
         history.Controls.Add(save);
         doc.Ui.Screens.Add(history);
+    }
+
+    private static void ApplyMasterDetail(SsotDocument doc, IReadOnlyList<string> types)
+    {
+        var main = new ScreenInfo { Id = "main", Title = "Catalog Browser", Route = "/" };
+
+        var searchBox = BlueprintCompiler.CreateThing(BlueprintThingKind.PlaceToType, types, 1);
+        searchBox.Id = "searchBox";
+        searchBox.Label = "Search catalog";
+        main.Controls.Add(searchBox);
+
+        var categoryFilter = BlueprintCompiler.CreateThing(BlueprintThingKind.ChoiceList, types, 1);
+        categoryFilter.Id = "categoryFilter";
+        categoryFilter.Label = "Filter by category";
+        categoryFilter.Action = "FilterList";
+        main.Controls.Add(categoryFilter);
+
+        var catalogList = BlueprintCompiler.CreateThing(BlueprintThingKind.ResultsList, types, 1);
+        catalogList.Id = "catalogList";
+        catalogList.Label = "Catalog items";
+        catalogList.Action = "SelectItem";
+        main.Controls.Add(catalogList);
+
+        var newButton = BlueprintCompiler.CreateThing(BlueprintThingKind.Button, types, 1);
+        newButton.Id = "newItemButton";
+        newButton.Label = "New item";
+        newButton.Action = "OpenEditor";
+        main.Controls.Add(newButton);
+
+        doc.Ui.Screens.Add(main);
+
+        var editor = new ScreenInfo { Id = "editor", Title = "Item Editor", Route = "/editor" };
+        var titleBox = BlueprintCompiler.CreateThing(BlueprintThingKind.PlaceToType, types, 2);
+        titleBox.Id = "itemTitle";
+        titleBox.Label = "Item Title";
+        editor.Controls.Add(titleBox);
+
+        var descBox = BlueprintCompiler.CreateThing(BlueprintThingKind.PlaceToType, types, 3);
+        descBox.Id = "itemDescription";
+        descBox.Label = "Description";
+        editor.Controls.Add(descBox);
+
+        var saveButton = BlueprintCompiler.CreateThing(BlueprintThingKind.Button, types, 2);
+        saveButton.Id = "saveItemButton";
+        saveButton.Label = "Save Changes";
+        saveButton.Action = "SaveItem";
+        editor.Controls.Add(saveButton);
+
+        doc.Ui.Screens.Add(editor);
+
+        doc.Workflows.Add(new WorkflowInfo
+        {
+            Id = "filterCatalog",
+            Name = "Filter Catalog",
+            Trigger = "categoryFilter",
+            Steps = { "Read selected category", "Query matching catalog items", "Update catalog items list" },
+            ErrorHandling = new ErrorHandlingInfo { Strategy = "ShowMessageBox", LogLevel = "Warning" }
+        });
+
+        doc.Workflows.Add(new WorkflowInfo
+        {
+            Id = "saveItem",
+            Name = "Save Item",
+            Trigger = "saveItemButton",
+            Steps = { "Read item form fields", "Validate item properties", "Persist item to storage", "Return to catalog" },
+            ErrorHandling = new ErrorHandlingInfo { Strategy = "ShowMessageBox", LogLevel = "Warning" }
+        });
+    }
+
+    private static void ApplyDashboard(SsotDocument doc, IReadOnlyList<string> types)
+    {
+        var main = new ScreenInfo { Id = "main", Title = "Analytics Dashboard", Route = "/" };
+
+        var timeRange = BlueprintCompiler.CreateThing(BlueprintThingKind.ChoiceList, types, 1);
+        timeRange.Id = "timeRangeFilter";
+        timeRange.Label = "Time range (Today / 7 Days / 30 Days)";
+        timeRange.Action = "UpdateTimeRange";
+        main.Controls.Add(timeRange);
+
+        var refreshButton = BlueprintCompiler.CreateThing(BlueprintThingKind.Button, types, 1);
+        refreshButton.Id = "refreshMetricsButton";
+        refreshButton.Label = "Refresh Metrics";
+        refreshButton.Action = "RefreshDashboard";
+        main.Controls.Add(refreshButton);
+
+        var activityList = BlueprintCompiler.CreateThing(BlueprintThingKind.ResultsList, types, 1);
+        activityList.Id = "activityFeed";
+        activityList.Label = "Recent Activity & Events";
+        activityList.Action = "ViewActivityDetail";
+        main.Controls.Add(activityList);
+
+        var exportReportButton = BlueprintCompiler.CreateThing(BlueprintThingKind.Button, types, 2);
+        exportReportButton.Id = "exportReportButton";
+        exportReportButton.Label = "Export Report";
+        exportReportButton.Action = "ExportReport";
+        main.Controls.Add(exportReportButton);
+
+        doc.Ui.Screens.Add(main);
+
+        doc.Workflows.Add(new WorkflowInfo
+        {
+            Id = "refreshDashboard",
+            Name = "Refresh Dashboard",
+            Trigger = "refreshMetricsButton",
+            Steps = { "Fetch updated metrics from data source", "Aggregate totals by time range", "Populate recent activity feed" },
+            ErrorHandling = new ErrorHandlingInfo { Strategy = "ShowMessageBox", LogLevel = "Warning" }
+        });
+    }
+
+    private static void ApplyBatchProcessor(SsotDocument doc, IReadOnlyList<string> types)
+    {
+        var main = new ScreenInfo { Id = "main", Title = "Batch Processor", Route = "/" };
+
+        var destinationBox = BlueprintCompiler.CreateThing(BlueprintThingKind.PlaceToType, types, 1);
+        destinationBox.Id = "destinationFolder";
+        destinationBox.Label = "Destination folder";
+        main.Controls.Add(destinationBox);
+
+        var formatPicker = BlueprintCompiler.CreateThing(BlueprintThingKind.ChoiceList, types, 1);
+        formatPicker.Id = "formatPreset";
+        formatPicker.Label = "Processing preset / format";
+        formatPicker.Action = "SelectPreset";
+        main.Controls.Add(formatPicker);
+
+        var queueList = BlueprintCompiler.CreateThing(BlueprintThingKind.ResultsList, types, 1);
+        queueList.Id = "fileQueue";
+        queueList.Label = "File processing queue";
+        queueList.Action = "SelectQueueItem";
+        main.Controls.Add(queueList);
+
+        var startButton = BlueprintCompiler.CreateThing(BlueprintThingKind.Button, types, 1);
+        startButton.Id = "startBatchButton";
+        startButton.Label = "Start Processing";
+        startButton.Action = "ProcessBatch";
+        main.Controls.Add(startButton);
+
+        doc.Ui.Screens.Add(main);
+
+        var logsScreen = new ScreenInfo { Id = "logs", Title = "Batch Summary & Logs", Route = "/logs" };
+        var logList = BlueprintCompiler.CreateThing(BlueprintThingKind.ResultsList, types, 2);
+        logList.Id = "processLog";
+        logList.Label = "Execution logs and results";
+        logsScreen.Controls.Add(logList);
+
+        var openDestButton = BlueprintCompiler.CreateThing(BlueprintThingKind.Button, types, 2);
+        openDestButton.Id = "openDestinationButton";
+        openDestButton.Label = "Open Destination Folder";
+        openDestButton.Action = "OpenDestination";
+        logsScreen.Controls.Add(openDestButton);
+
+        doc.Ui.Screens.Add(logsScreen);
+
+        doc.Workflows.Add(new WorkflowInfo
+        {
+            Id = "processBatch",
+            Name = "Process Batch",
+            Trigger = "startBatchButton",
+            Steps = { "Verify destination folder and input queue", "Iterate items and apply transformation preset", "Log status per item", "Display completion summary" },
+            ErrorHandling = new ErrorHandlingInfo { Strategy = "ShowMessageBox", LogLevel = "Warning" }
+        });
     }
 
     private static bool ContainsAny(string text, params string[] terms) =>

@@ -2,7 +2,10 @@ namespace CoreAiArchitect.Core.Models.Ssot;
 
 public sealed class SsotDocument
 {
-    public string SsotVersion { get; set; } = "1.0.0";
+    public const string CurrentSchemaVersion = "1.1.0";
+
+    public string SsotVersion { get; set; } = CurrentSchemaVersion;
+    public string ProfileId { get; set; } = "wpf_desktop";
     public ProjectInfo Project { get; set; } = new();
     public EnvironmentInfo Environment { get; set; } = new();
     public ArchitectureInfo Architecture { get; set; } = new();
@@ -87,6 +90,8 @@ public sealed class ScreenInfo
     public string Id { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public string Route { get; set; } = string.Empty;
+    /// <summary>Window | Dialog | Modal | Tab | BottomSheet | Drawer | Page</summary>
+    public string ScreenType { get; set; } = "Window";
     public List<ControlInfo> Controls { get; set; } = new();
 }
 

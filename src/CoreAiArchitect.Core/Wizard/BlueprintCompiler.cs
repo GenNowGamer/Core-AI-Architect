@@ -21,7 +21,8 @@ public sealed class BlueprintCompiler
 
         if (seedMainScreen)
         {
-            doc.Ui.Screens.Add(NewScreen("main", "Main", "/"));
+            var defaultType = answers.ProfileId.Equals("android_app", StringComparison.OrdinalIgnoreCase) ? "Screen" : "Window";
+            doc.Ui.Screens.Add(NewScreen("main", "Main", "/", defaultType));
         }
 
         ApplyRememberScreens(doc, answers, profile);
@@ -171,6 +172,7 @@ public sealed class BlueprintCompiler
 
     private void ApplyShell(SsotDocument doc, WizardAnswers answers, FormSchemaDefinition profile)
     {
+        doc.ProfileId = answers.ProfileId;
         doc.Project.Id = answers.DerivedProjectId;
         doc.Project.Name = answers.ProjectName.Trim();
         doc.Project.Description = answers.Description.Trim();
@@ -333,7 +335,8 @@ public sealed class BlueprintCompiler
             var history = doc.Ui.Screens.FirstOrDefault(s => s.Id.Equals("history", StringComparison.OrdinalIgnoreCase));
             if (history is null)
             {
-                history = NewScreen("history", "History", "/history");
+                var historyType = answers.ProfileId.Equals("android_app", StringComparison.OrdinalIgnoreCase) ? "Screen" : "Dialog";
+                history = NewScreen("history", "History", "/history", historyType);
                 history.Controls.Add(new ControlInfo
                 {
                     Id = "historyList",
@@ -361,7 +364,8 @@ public sealed class BlueprintCompiler
             var settings = doc.Ui.Screens.FirstOrDefault(s => s.Id.Equals("settings", StringComparison.OrdinalIgnoreCase));
             if (settings is null)
             {
-                settings = NewScreen("settings", "Settings", "/settings");
+                var settingsType = answers.ProfileId.Equals("android_app", StringComparison.OrdinalIgnoreCase) ? "Screen" : "Dialog";
+                settings = NewScreen("settings", "Settings", "/settings", settingsType);
                 settings.Controls.Add(new ControlInfo
                 {
                     Id = "settingsSaveButton",
@@ -378,7 +382,10 @@ public sealed class BlueprintCompiler
         }
 
         if (doc.Ui.Screens.Count == 0)
-            doc.Ui.Screens.Add(NewScreen("main", "Main", "/"));
+        {
+            var defaultType = answers.ProfileId.Equals("android_app", StringComparison.OrdinalIgnoreCase) ? "Screen" : "Window";
+            doc.Ui.Screens.Add(NewScreen("main", "Main", "/", defaultType));
+        }
     }
 
     private void DeriveEntitiesAndWorkflows(SsotDocument doc, FormSchemaDefinition profile)
@@ -770,11 +777,12 @@ public sealed class BlueprintCompiler
         || c.Type.Equals("DataGrid", StringComparison.OrdinalIgnoreCase)
         || c.Type.Equals("PipelineInput", StringComparison.OrdinalIgnoreCase);
 
-    private static ScreenInfo NewScreen(string id, string title, string route) => new()
+    public static ScreenInfo NewScreen(string id, string title, string route, string screenType = "Window") => new()
     {
         Id = id,
         Title = title,
         Route = route,
+        ScreenType = screenType,
         Controls = new List<ControlInfo>()
     };
 

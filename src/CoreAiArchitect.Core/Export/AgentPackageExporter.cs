@@ -32,6 +32,27 @@ public sealed class AgentPackageExporter
         File.WriteAllText(agents, BuildAgentsMd(document));
         written.Add(agents);
 
+        var cursorRules = Path.Combine(directory, ".cursorrules");
+        File.WriteAllText(cursorRules, BuildCursorRules(document));
+        written.Add(cursorRules);
+
+        var claudeMd = Path.Combine(directory, "CLAUDE.md");
+        File.WriteAllText(claudeMd, BuildClaudeMd(document));
+        written.Add(claudeMd);
+
+        var geminiDir = Path.Combine(directory, ".gemini");
+        Directory.CreateDirectory(geminiDir);
+        var geminiCfg = Path.Combine(geminiDir, "config.json");
+        File.WriteAllText(geminiCfg, BuildGeminiConfig(document));
+        written.Add(geminiCfg);
+
+        var gitIgnorePath = Path.Combine(directory, ".gitignore");
+        if (!File.Exists(gitIgnorePath))
+        {
+            File.WriteAllText(gitIgnorePath, BuildGitIgnore(document));
+            written.Add(gitIgnorePath);
+        }
+
         var specsDir = Path.Combine(directory, "specifications");
         Directory.CreateDirectory(specsDir);
         written.Add(WriteSpec(specsDir, "requirements.md", BuildRequirements(document)));
@@ -71,7 +92,7 @@ public sealed class AgentPackageExporter
         return path;
     }
 
-    private static string BuildAgentsMd(SsotDocument document)
+    public static string BuildAgentsMd(SsotDocument document)
     {
         var name = string.IsNullOrWhiteSpace(document.Project.Name) ? "this application" : document.Project.Name;
         var sb = new StringBuilder();
@@ -107,7 +128,7 @@ public sealed class AgentPackageExporter
         return sb.ToString();
     }
 
-    private static string BuildRequirements(SsotDocument document)
+    public static string BuildRequirements(SsotDocument document)
     {
         var sb = new StringBuilder();
         sb.AppendLine("# Requirements");
@@ -128,7 +149,8 @@ public sealed class AgentPackageExporter
         sb.AppendLine();
         foreach (var screen in document.Ui.Screens)
         {
-            sb.AppendLine($"### {screen.Title} (`{screen.Id}`)");
+            var screenType = string.IsNullOrWhiteSpace(screen.ScreenType) ? "Window" : screen.ScreenType;
+            sb.AppendLine($"### {screen.Title} (`{screen.Id}`, Type: {screenType})");
             foreach (var control in screen.Controls)
                 sb.AppendLine($"- {control.Label} ({control.Type}) → {control.Action}");
             sb.AppendLine();
@@ -182,7 +204,8 @@ public sealed class AgentPackageExporter
         sb.AppendLine();
         foreach (var screen in document.Ui.Screens)
         {
-            sb.AppendLine($"## {screen.Title}");
+            var screenType = string.IsNullOrWhiteSpace(screen.ScreenType) ? "Window" : screen.ScreenType;
+            sb.AppendLine($"## {screen.Title} (Type: {screenType})");
             sb.AppendLine($"Route: `{screen.Route}`");
             foreach (var control in screen.Controls)
                 sb.AppendLine($"- `{control.Id}` {control.Type}: {control.Label} (action {control.Action})");
@@ -246,7 +269,7 @@ public sealed class AgentPackageExporter
             sb.AppendLine($"- Guidance: {string.Join(", ", decision.Guidance)}");
     }
 
-    private static List<(string Slug, string Body)> BuildTasks(SsotDocument document)
+    public static List<(string Slug, string Body)> BuildTasks(SsotDocument document)
     {
         var name = string.IsNullOrWhiteSpace(document.Project.Name) ? "the app" : document.Project.Name;
         var tasks = new List<(string, string)>
@@ -269,4 +292,143 @@ public sealed class AgentPackageExporter
 
     private static string TaskBody(string title, string summary) =>
         $"# {title}\n\n{summary}\n\nUse `project.json` and `specifications/` as the contract. Prefer small, reviewable commits.\n";
+
+    private static string BuildCursorRules(SsotDocument document)
+    {
+        var name = string.IsNullOrWhiteSpace(document.Project.Name) ? "Application" : document.Project.Name;
+        var sb = new StringBuilder();
+        sb.AppendLine($"# Cursor Rules — {name}");
+        sb.AppendLine();
+        sb.AppendLine("- You are an expert AI software engineer implementing an application specified by an App Blueprint (`project.json`).");
+        sb.AppendLine($"- Target OS & Runtime: {document.Environment.TargetOs} / {document.Environment.Runtime}");
+        sb.AppendLine($"- UI Framework & Language: {document.Environment.UiFramework} ({document.Environment.Language})");
+        sb.AppendLine($"- Architecture Pattern: {document.Architecture.Pattern} (Decision mode: {document.Architecture.PatternDecision.Mode})");
+        sb.AppendLine($"- Data Storage: {document.Data.Storage.Type} (Decision mode: {document.Data.Storage.Decision.Mode})");
+        sb.AppendLine();
+        sb.AppendLine("## Non-Negotiable Constraints");
+        sb.AppendLine($"- Logging required: {document.Constraints.LoggingRequired}");
+        sb.AppendLine($"- Telemetry allowed: {document.Constraints.TelemetryAllowed}");
+        if (document.Constraints.ForbiddenLibraries.Count > 0)
+            sb.AppendLine($"- Forbidden libraries: {string.Join(", ", document.Constraints.ForbiddenLibraries)}");
+        if (document.Constraints.AllowedLibraries.Count > 0)
+            sb.AppendLine($"- Allowed libraries: {string.Join(", ", document.Constraints.AllowedLibraries)}");
+        sb.AppendLine();
+        sb.AppendLine("## Implementation Flow");
+        sb.AppendLine("1. Review `project.json` and `specifications/` before writing code.");
+        sb.AppendLine("2. Complete phases sequentially as outlined in `tasks/`.");
+        sb.AppendLine("3. If domain entities say Scaffold only, invent a richer domain model fulfilling `project.description` and workflow steps.");
+        return sb.ToString();
+    }
+
+    private static string BuildClaudeMd(SsotDocument document)
+    {
+        var name = string.IsNullOrWhiteSpace(document.Project.Name) ? "Application" : document.Project.Name;
+        var sb = new StringBuilder();
+        sb.AppendLine($"# Claude Code Instructions — {name}");
+        sb.AppendLine();
+        sb.AppendLine("## Project Architecture");
+        sb.AppendLine($"- Stack: {document.Environment.Language} / {document.Environment.UiFramework} on {document.Environment.TargetOs} ({document.Environment.Runtime})");
+        sb.AppendLine($"- Architecture: {document.Architecture.Pattern}");
+        sb.AppendLine($"- Storage: {document.Data.Storage.Type}");
+        sb.AppendLine($"- Testing: {document.Testing.UnitTestFramework} (UI: {document.Testing.UiTestFramework})");
+        sb.AppendLine();
+        sb.AppendLine("## Development Guidelines");
+        sb.AppendLine("- Consult `project.json` as the Single Source of Truth.");
+        sb.AppendLine("- Execute the phased tasks in `tasks/` sequentially.");
+        sb.AppendLine("- Keep code modular, cleanly separated by layers, and covered by unit tests.");
+        sb.AppendLine("- Respect decision modes: adhere to `specified` / `recommended`; use best judgment for `agent_discretion`.");
+        return sb.ToString();
+    }
+
+    private static string BuildGeminiConfig(SsotDocument document)
+    {
+        var name = string.IsNullOrWhiteSpace(document.Project.Name) ? "Application" : document.Project.Name;
+        return $$"""
+        {
+          "projectName": "{{name}}",
+          "blueprintVersion": "{{document.SsotVersion}}",
+          "profileId": "{{document.ProfileId}}",
+          "architecture": "{{document.Architecture.Pattern}}",
+          "specificationEntry": "specifications/overview.md",
+          "tasksDirectory": "tasks/"
+        }
+        """;
+    }
+
+    private static string BuildGitIgnore(SsotDocument document)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("# Core AI Architect Workspace .gitignore");
+        sb.AppendLine(".vs/");
+        sb.AppendLine(".idea/");
+        sb.AppendLine("*.user");
+        sb.AppendLine("*.suo");
+        sb.AppendLine();
+
+        if (document.Environment.TargetOs.Equals("Android", StringComparison.OrdinalIgnoreCase)
+            || document.ProfileId.Equals("android_app", StringComparison.OrdinalIgnoreCase))
+        {
+            sb.AppendLine("# Android / Gradle");
+            sb.AppendLine(".gradle/");
+            sb.AppendLine("build/");
+            sb.AppendLine("app/build/");
+            sb.AppendLine("*.apk");
+            sb.AppendLine("*.aab");
+            sb.AppendLine("local.properties");
+        }
+        else
+        {
+            sb.AppendLine("# .NET / Visual Studio");
+            sb.AppendLine("[Bb]in/");
+            sb.AppendLine("[Oo]bj/");
+            sb.AppendLine("artifacts/");
+            sb.AppendLine("TestResults/");
+        }
+
+        return sb.ToString();
+    }
+
+    public static bool InitializeGitRepository(string directory, SsotDocument document, out string output)
+    {
+        try
+        {
+            var gitDir = Path.Combine(directory, ".git");
+            if (Directory.Exists(gitDir))
+            {
+                output = "Git repository already initialized.";
+                return true;
+            }
+
+            var startInfo = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "git",
+                Arguments = "init",
+                WorkingDirectory = directory,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using var p1 = System.Diagnostics.Process.Start(startInfo);
+            p1?.WaitForExit(5000);
+
+            startInfo.Arguments = "add .";
+            using var p2 = System.Diagnostics.Process.Start(startInfo);
+            p2?.WaitForExit(5000);
+
+            var commitMsg = $"Initial App Blueprint and Agent Package for {document.Project.Name}".Trim();
+            startInfo.Arguments = $"commit -m \"{commitMsg}\"";
+            using var p3 = System.Diagnostics.Process.Start(startInfo);
+            p3?.WaitForExit(5000);
+
+            output = "Git repository initialized and initial commit created.";
+            return true;
+        }
+        catch (Exception ex)
+        {
+            output = $"Git initialization skipped or failed: {ex.Message}";
+            return false;
+        }
+    }
 }

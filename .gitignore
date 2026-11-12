@@ -6,7 +6,9 @@
 *.suo
 *.userosscache
 *.sln.docstates
+*.code-workspace
 
+# Build outputs and temporary artifacts
 [Bb]in/
 [Oo]bj/
 [Ll]og/
@@ -44,3 +46,24 @@ _pkginfo.txt
 
 # Installer staging (large binaries)
 installer/payload/
+
+# Strict documentation exclusion policy:
+# ONLY the root README.md may ever be pushed to remote GitHub repositories.
+# All other docs, specs, guides, session logs, and trial projects must be excluded.
+*.md
+**/*.md
+!/README.md
+!/readme.md
+docs/
+*.pdf
+*.docx
+*.ssot.json
+session_handoff.md
+AAA_Quality_Checklist.md
+CDE_BOOT_FILES_MANIFEST.md
+CDE_Folder_Structure_Map.md
+CHANGELOG.md
+PHASE_1_2_COMPLETION_SUMMARY.md
+PHASE_3_BOOT_ARCHITECTURE.md
+GEMINI.md
+AGENTS.md

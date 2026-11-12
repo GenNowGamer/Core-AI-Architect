@@ -34,10 +34,19 @@ public sealed class CompatibilityEngine
         return result;
     }
 
-    public CompatibilityResult EvaluateDocument(SsotDocument document)
+    public CompatibilityResult EvaluateDocument(SsotDocument document, FormSchemaDefinition? profile = null)
     {
+        var profileId = !string.IsNullOrWhiteSpace(document.ProfileId)
+            ? document.ProfileId
+            : (document.Environment.TargetOs.Equals("Android", StringComparison.OrdinalIgnoreCase)
+               || document.Environment.UiFramework.Equals("Jetpack Compose", StringComparison.OrdinalIgnoreCase)
+               || document.Project.Tags.Any(t => t.Equals("android-app", StringComparison.OrdinalIgnoreCase)))
+                ? "android_app"
+                : "wpf_desktop";
+
         var answers = new WizardAnswers
         {
+            ProfileId = profileId,
             TargetOs = document.Environment.TargetOs,
             Runtime = document.Environment.Runtime,
             UiFramework = document.Environment.UiFramework,
@@ -52,7 +61,7 @@ public sealed class CompatibilityEngine
             }
         };
 
-        var result = Evaluate(answers);
+        var result = Evaluate(answers, profile);
         EvaluateTriggerBindings(document, result);
         EvaluateDesktopPlaywright(document, result);
         EvaluateAndroidDesktopTests(document, result);
@@ -90,13 +99,24 @@ public sealed class CompatibilityEngine
         };
     }
 
-    public IReadOnlyList<string> AllowedThemes(FormSchemaDefinition? profile)
+    public IReadOnlyList<string> AllowedThemes(FormSchemaDefinition? profile, WizardAnswers? answers = null)
     {
         var fromSchema = profile?.Sections
             .SelectMany(s => s.Fields)
             .FirstOrDefault(f => f.Path.Equals("ui.theme", StringComparison.OrdinalIgnoreCase))
             ?.Values;
-        return fromSchema is { Count: > 0 } ? fromSchema : new[] { "Default", "Fluent", "Custom" };
+        if (fromSchema is { Count: > 0 })
+            return fromSchema;
+
+        if (profile?.Id.Equals("android_app", StringComparison.OrdinalIgnoreCase) == true
+            || answers?.ProfileId.Equals("android_app", StringComparison.OrdinalIgnoreCase) == true
+            || answers?.TargetOs.Equals("Android", StringComparison.OrdinalIgnoreCase) == true
+            || (answers != null && IsAndroidUi(answers.UiFramework)))
+        {
+            return new[] { "Material3", "Material", "Custom" };
+        }
+
+        return new[] { "Default", "Fluent", "Custom" };
     }
 
     public void ApplySafeDefaults(WizardAnswers answers, FormSchemaDefinition profile)
@@ -214,7 +234,7 @@ public sealed class CompatibilityEngine
 
     private void EvaluateTheme(WizardAnswers answers, FormSchemaDefinition? profile, CompatibilityResult result)
     {
-        var allowed = AllowedThemes(profile);
+        var allowed = AllowedThemes(profile, answers);
         if (!allowed.Contains(answers.Theme, StringComparer.OrdinalIgnoreCase))
         {
             result.Issues.Add(new CompatibilityIssue
