@@ -1,5 +1,13 @@
 # Core AI Architect
 
+[![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%7C%20Windows%2011%20(x64)-0078D6.svg?logo=windows&logoColor=white)](#build-and-run)
+[![Version](https://img.shields.io/badge/Version-1.1.0-green.svg)](https://github.com/GenNowGamer/Core-AI-Architect/releases/latest)
+[![Release](https://img.shields.io/badge/Release-v1.1.0-orange.svg)](https://github.com/GenNowGamer/Core-AI-Architect/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/GenNowGamer/Core-AI-Architect/total?color=2ea44f&logo=github&label=Downloads)](https://github.com/GenNowGamer/Core-AI-Architect/releases)
+[![Framework](https://img.shields.io/badge/Framework-.NET%208%20WPF%20%7C%20PowerShell%207%2B-512BD4.svg?logo=dotnet&logoColor=white)](#solution-layout)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](#stack)
+[![Telemetry](https://img.shields.io/badge/Telemetry-Zero%20%7C%20100%25%20Local-success.svg)](#what-it-does)
+
 Windows 11 desktop tool that authors a canonical JSON **App Blueprint** (SSOT — single source of truth) for AI coding agents.
 
 ## What it does
