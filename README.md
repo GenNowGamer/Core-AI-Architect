@@ -2,36 +2,32 @@
 
 Windows 11 desktop tool that authors a canonical JSON **App Blueprint** (SSOT — single source of truth) for AI coding agents.
 
-For current session state, open work, and continuity notes, see [session_handoff.md](session_handoff.md).  
-For the human-readable user guide (PDF), see [docs/Core_AI_Architect_User_Guide.pdf](docs/Core_AI_Architect_User_Guide.pdf).  
-Markdown source for that guide: [docs/USER_GUIDE.md](docs/USER_GUIDE.md).
-
 ## What it does
 
-1. Fill a **guided Ad-Lib** (who it’s for, what it helps them do, main capabilities) plus optional product rules / template
+1. Fill a **guided Ad-Lib** (who it’s for, what it helps them do, main capabilities) plus optional product rules / starter templates (Blank, Master-Detail / Catalog, Dashboard & Analytics, File / Batch Processor, Simple form, List + save history)
 2. Answer plain-language **Needs** (accounts, multi-device, notifications)
-3. Build **screens** with everyday things: choice list, place to type, button, results list
+3. Build **screens** with visual controls: choice lists, places to type, buttons, results lists, and interactive wireframes with live reordering
 4. Write plain-English steps for **when someone clicks** each button
 5. Optionally turn on History / Settings (**Remember**)
-6. Review the **Project Blueprint** hub (recommendations with Why?, Simple/Standard/Expert detail), then save/export **App Blueprint** JSON, Markdown, or a full **Agent Package** folder
+6. Review the **Project Blueprint** hub with deterministic recommendations, in-app artifact inspection tabs (App Story, Blueprint JSON, AGENTS.md, Specifications, Tasks), Undo/Redo support, automated git workspace initialization, and one-click "Copy Kickoff Prompt"
+7. Save and export **App Blueprint** JSON, Markdown, or a full **Agent Package** folder with agent context files (`.cursorrules`, `CLAUDE.md`, `.gemini/config.json`)
 
-Technical defaults (theme, navigation, architecture, build targets) are filled automatically from the form profile. There are **no sample projects** in the product itself; templates only seed screens you can edit.
+Technical defaults (theme, navigation, architecture, build targets) are filled automatically from the form profile. Starter templates seed customizable screens.
 
 ## Solution layout
 
 | Project | Role |
 |---|---|
-| `src/CoreAiArchitect.Core` | SSOT model, form schemas, `BlueprintCompiler`, recommendations, validation, JSON/Markdown/Agent Package exporters |
-| `src/CoreAiArchitect.App` | WPF guided wizard (Ad-Lib → Needs → Screens → Blueprint hub) |
+| `src/CoreAiArchitect.Core` | SSOT model, schema catalog, `BlueprintCompiler`, schema versioning & migrations, `UndoManager`, recommendations, JSON/Markdown/Agent Package exporters |
+| `src/CoreAiArchitect.App` | Modern Windows 11 Fluent dark-themed WPF wizard (Ad-Lib → Needs → Screens → Blueprint hub) with live wireframe mockup canvas and inspection tabs |
 | `src/CoreAiArchitect.PowerShell` | PowerShell 7+ binary module |
 | `src/CoreAiArchitect.Installer` | WiX v5 MSI installer (self-contained, builds via `dotnet build`) |
 | `src/CoreAiArchitect.Package` | MSIX packaging (Visual Studio — optional) |
-| `tests/CoreAiArchitect.Tests` | Core unit tests |
+| `tests/CoreAiArchitect.Tests` | Core unit and UI integration tests (50 passing tests) |
 
 ## Build and run
 
 ```powershell
-cd "d:\Robert\Desktop\App Project Builds\Core_AI_Architect"
 dotnet build CoreAiArchitect.sln -c Release
 dotnet test CoreAiArchitect.sln -c Release
 dotnet run --project src/CoreAiArchitect.App/CoreAiArchitect.App.csproj -c Release
@@ -104,9 +100,9 @@ Located in `schemas/` (wizard surfaces the common ones; others remain available 
 
 ## Agent contract
 
-See [docs/SSOT_CONTRACT.md](docs/SSOT_CONTRACT.md) for how coding agents must interpret exported blueprint JSON (`*.ssot.json`), including **decision modes** (`agent_discretion`) and **requirements**.
+Blueprint JSON (`*.ssot.json`) specifies canonical system definitions, including **decision modes** (`agent_discretion`) and **requirements**.
 
-From the app you can also **Export Agent Package** — a folder with `AGENTS.md`, specifications, and phased tasks generated from the same SSOT.
+From the app you can also **Export Agent Package** — a folder with `AGENTS.md`, specifications, preconfigured agent rules (`.cursorrules`, `CLAUDE.md`, `.gemini/config.json`), and phased tasks generated from the same SSOT.
 
 ## Stack
 

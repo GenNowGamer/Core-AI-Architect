@@ -1,8 +1,13 @@
 using System.Collections.ObjectModel;
+using System.Text;
+using System.Text.Json;
 using System.Windows;
+using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CoreAiArchitect.App.Services;
+using CoreAiArchitect.Core.Export;
+using CoreAiArchitect.Core.Json;
 using CoreAiArchitect.Core.Models.FormSchema;
 using CoreAiArchitect.Core.Models.Ssot;
 using CoreAiArchitect.Core.Validation;
@@ -74,6 +79,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly BlueprintCompiler _compiler = new();
     private readonly SsotReadinessEngine _readiness = new();
     private readonly RecommendationEngine _recommendations = new();
+    private readonly UndoManager _undoManager = new();
     private bool _suppressKindChange;
     private bool _documentInitialized;
 
@@ -159,6 +165,16 @@ public partial class MainWindowViewModel : ObservableObject
     public ObservableCollection<string> DecisionModeOptions { get; }
     public ObservableCollection<string> ThemeOptions { get; } = new();
     public ObservableCollection<string> NavigationOptions { get; } = new();
+    public ObservableCollection<string> ScreenTypeOptions { get; } = new()
+    {
+        "Window",
+        "Dialog",
+        "Modal",
+        "Tab",
+        "BottomSheet",
+        "Drawer",
+        "Page"
+    };
 
     public WizardAnswers Answers { get; }
 
@@ -215,6 +231,15 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private BlueprintRecommendation? _selectedRecommendation;
     [ObservableProperty] private string _recommendationWhyText = string.Empty;
     [ObservableProperty] private bool _showNotificationNotes;
+    [ObservableProperty] private bool _canUndo;
+    [ObservableProperty] private bool _canRedo;
+    [ObservableProperty] private bool _isDarkMode = true;
+    [ObservableProperty] private bool _initializeGitOnExport = true;
+    [ObservableProperty] private int _selectedArtifactTabIndex;
+    [ObservableProperty] private string _blueprintJsonPreview = string.Empty;
+    [ObservableProperty] private string _agentsMdPreview = string.Empty;
+    [ObservableProperty] private string _specificationsPreview = string.Empty;
+    [ObservableProperty] private string _tasksPreview = string.Empty;
 
     public bool SavePastResults
     {
@@ -515,8 +540,18 @@ public partial class MainWindowViewModel : ObservableObject
         if (folder is null) return;
         var target = System.IO.Path.Combine(folder, Answers.DerivedProjectId + "-Agent-Package");
         var written = _documents.ExportAgentPackage(target);
-        StatusText = $"Exported agent package ({written.Count} files) to {target}";
-        _dialogs.ShowMessage($"Agent package written to:\n{target}\n\nIncludes project.json, AGENTS.md, specifications/, and tasks/.");
+        var msg = $"Exported agent package ({written.Count} files) to {target}";
+
+        if (InitializeGitOnExport)
+        {
+            if (AgentPackageExporter.InitializeGitRepository(target, Document!, out var gitMsg))
+                msg += $"\n\nGit: {gitMsg}";
+            else
+                msg += $"\n\nGit (note): {gitMsg}";
+        }
+
+        StatusText = $"Exported agent package to {target}";
+        _dialogs.ShowMessage($"{msg}\n\nIncludes project.json, AGENTS.md, .cursorrules, CLAUDE.md, specifications/, and tasks/.");
     }
 
     [RelayCommand]
@@ -526,7 +561,7 @@ public partial class MainWindowViewModel : ObservableObject
         CompileDocument();
         var profile = _schemaCatalog.RequireById(Answers.ProfileId);
         var result = _readiness.Assess(Document!, profile);
-        var compat = _compatibility.EvaluateDocument(Document!);
+        var compat = _compatibility.EvaluateDocument(Document!, profile);
         foreach (var issue in compat.Issues)
         {
             result.Issues.Add(new ValidationIssue
@@ -546,6 +581,7 @@ public partial class MainWindowViewModel : ObservableObject
         AppStory = BlueprintCompiler.BuildAppStory(Document!, Answers);
         RefreshHub(result, compat.Issues);
         RefreshRecommendations();
+        RefreshArtifactPreviews();
         StatusText = IsReadyToExport
             ? "Ready — you can save and hand this blueprint to an AI coding agent."
             : "Not ready yet — resolve the items in the Blueprint hub.";
@@ -610,17 +646,193 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void CopyKickoffPrompt()
+    {
+        if (Document is null) return;
+        var sb = new StringBuilder();
+        var name = string.IsNullOrWhiteSpace(Document.Project.Name) ? "this application" : Document.Project.Name;
+        sb.AppendLine($"# AI Coding Agent Kickoff: {name}");
+        sb.AppendLine();
+        sb.AppendLine("Please build this application following the specification in `project.json` and `AGENTS.md` exactly:");
+        sb.AppendLine($"- Target: {Document.Environment.TargetOs} ({Document.Environment.Runtime}) using {Document.Environment.UiFramework} with {Document.Environment.Language}");
+        sb.AppendLine($"- Architecture Pattern: {Document.Architecture.Pattern} (Decision mode: {Document.Architecture.PatternDecision.Mode})");
+        sb.AppendLine($"- Data Storage: {Document.Data.Storage.Type} (Decision mode: {Document.Data.Storage.Decision.Mode})");
+        sb.AppendLine($"- Logging Required: {Document.Constraints.LoggingRequired}, Telemetry Allowed: {Document.Constraints.TelemetryAllowed}");
+        if (Document.Constraints.ForbiddenLibraries.Count > 0)
+            sb.AppendLine($"- Forbidden Libraries: {string.Join(", ", Document.Constraints.ForbiddenLibraries)}");
+        sb.AppendLine();
+        sb.AppendLine("Please execute the phased tasks starting with Phase 1 in `tasks/001-foundation.md`. Keep commits small and verified with tests.");
+
+        Clipboard.SetText(sb.ToString());
+        StatusText = "Copied AI agent kickoff prompt to clipboard!";
+        _dialogs.ShowMessage("Copied AI coding agent kickoff prompt to clipboard!\n\nYou can paste this directly to Claude, Cursor, Copilot, or Gemini CLI along with your exported Agent Package.", "Prompt Copied");
+    }
+
+    [RelayCommand]
+    private void ToggleDarkMode()
+    {
+        IsDarkMode = !IsDarkMode;
+        ApplyThemeMode(IsDarkMode);
+        StatusText = IsDarkMode ? "Switched to Dark theme." : "Switched to Light theme.";
+    }
+
+    public static void ApplyThemeMode(bool darkMode)
+    {
+        var app = Application.Current;
+        if (app is null) return;
+
+        if (darkMode)
+        {
+            app.Resources["SandBrush"] = new SolidColorBrush(Color.FromRgb(0x18, 0x1A, 0x1E)); // Main background
+            app.Resources["SandDeepBrush"] = new SolidColorBrush(Color.FromRgb(0x22, 0x26, 0x2E)); // Chrome/status/borders
+            app.Resources["CardBrush"] = new SolidColorBrush(Color.FromRgb(0x23, 0x27, 0x30)); // Cards
+            app.Resources["CardBorderBrush"] = new SolidColorBrush(Color.FromRgb(0x35, 0x3D, 0x4B));
+            app.Resources["InnerCardBackgroundBrush"] = new SolidColorBrush(Color.FromRgb(0x1C, 0x20, 0x27));
+            app.Resources["InnerCardBorderBrush"] = new SolidColorBrush(Color.FromRgb(0x32, 0x3A, 0x47));
+            app.Resources["InkBrush"] = new SolidColorBrush(Color.FromRgb(0xEE, 0xF1, 0xF5)); // Primary text
+            app.Resources["TextSecondaryBrush"] = new SolidColorBrush(Color.FromRgb(0xA6, 0xB0, 0xC0)); // Subtitle / muted
+            app.Resources["InputBackgroundBrush"] = new SolidColorBrush(Color.FromRgb(0x12, 0x14, 0x19));
+            app.Resources["InputBorderBrush"] = new SolidColorBrush(Color.FromRgb(0x3E, 0x47, 0x56));
+            app.Resources["HeaderGradient"] = new LinearGradientBrush(
+                Color.FromRgb(0x1A, 0x1E, 0x24),
+                Color.FromRgb(0x12, 0x15, 0x1A),
+                new Point(0, 0),
+                new Point(1, 1));
+            app.Resources["HeaderMenuBackgroundBrush"] = new SolidColorBrush(Color.FromRgb(0x1A, 0x1E, 0x24));
+            app.Resources["HeaderMenuTextBrush"] = new SolidColorBrush(Color.FromRgb(0xEE, 0xF1, 0xF5));
+            app.Resources["OuterBorderBrush"] = new SolidColorBrush(Color.FromRgb(0x35, 0x3D, 0x4B));
+            app.Resources["TealBrush"] = new SolidColorBrush(Color.FromRgb(0x4E, 0xB8, 0xB5));
+            app.Resources["TealSoftBrush"] = new SolidColorBrush(Color.FromRgb(0x3D, 0x94, 0x92));
+            app.Resources["CoralBrush"] = new SolidColorBrush(Color.FromRgb(0xFA, 0x7E, 0x6B));
+        }
+        else
+        {
+            app.Resources["SandBrush"] = new SolidColorBrush(Color.FromRgb(0xF4, 0xEF, 0xE6));
+            app.Resources["SandDeepBrush"] = new SolidColorBrush(Color.FromRgb(0xE8, 0xDF, 0xD0));
+            app.Resources["CardBrush"] = new SolidColorBrush(Color.FromArgb(0xF2, 0xFF, 0xFF, 0xFF));
+            app.Resources["CardBorderBrush"] = new SolidColorBrush(Color.FromRgb(0xE8, 0xDF, 0xD0));
+            app.Resources["InnerCardBackgroundBrush"] = new SolidColorBrush(Color.FromRgb(0xFF, 0xFC, 0xF8));
+            app.Resources["InnerCardBorderBrush"] = new SolidColorBrush(Color.FromRgb(0xE2, 0xD8, 0xC8));
+            app.Resources["InkBrush"] = new SolidColorBrush(Color.FromRgb(0x1A, 0x1A, 0x1A));
+            app.Resources["TextSecondaryBrush"] = new SolidColorBrush(Color.FromRgb(0x55, 0x55, 0x55));
+            app.Resources["InputBackgroundBrush"] = new SolidColorBrush(Color.FromRgb(0xFF, 0xFF, 0xFF));
+            app.Resources["InputBorderBrush"] = new SolidColorBrush(Color.FromRgb(0xC9, 0xBF, 0xAE));
+            var headerGrad = new LinearGradientBrush
+            {
+                StartPoint = new Point(0, 0),
+                EndPoint = new Point(1, 1)
+            };
+            headerGrad.GradientStops.Add(new GradientStop(Color.FromRgb(0x0F, 0x3D, 0x3E), 0));
+            headerGrad.GradientStops.Add(new GradientStop(Color.FromRgb(0x1A, 0x55, 0x56), 0.55));
+            headerGrad.GradientStops.Add(new GradientStop(Color.FromRgb(0xE8, 0x5D, 0x4C), 1));
+            app.Resources["HeaderGradient"] = headerGrad;
+            app.Resources["HeaderMenuBackgroundBrush"] = new SolidColorBrush(Color.FromRgb(0x0F, 0x3D, 0x3E));
+            app.Resources["HeaderMenuTextBrush"] = new SolidColorBrush(Color.FromRgb(0xFF, 0xFF, 0xFF));
+            app.Resources["OuterBorderBrush"] = Brushes.Transparent;
+            app.Resources["TealBrush"] = new SolidColorBrush(Color.FromRgb(0x0F, 0x3D, 0x3E));
+            app.Resources["TealSoftBrush"] = new SolidColorBrush(Color.FromRgb(0x1A, 0x55, 0x56));
+            app.Resources["CoralBrush"] = new SolidColorBrush(Color.FromRgb(0xE8, 0x5D, 0x4C));
+        }
+    }
+
+    [RelayCommand]
+    private void Undo()
+    {
+        var state = _undoManager.Undo(CurrentStep, Answers, Document);
+        if (state is null) return;
+        RestoreFromUndoState(state);
+        StatusText = $"Undid: {state.Description}";
+    }
+
+    [RelayCommand]
+    private void Redo()
+    {
+        var state = _undoManager.Redo(CurrentStep, Answers, Document);
+        if (state is null) return;
+        RestoreFromUndoState(state);
+        StatusText = $"Redid: {state.Description}";
+    }
+
+    public void RecordUndo(string description)
+    {
+        _undoManager.RecordSnapshot(description, CurrentStep, Answers, Document);
+        UpdateUndoState();
+    }
+
+    private void UpdateUndoState()
+    {
+        CanUndo = _undoManager.CanUndo;
+        CanRedo = _undoManager.CanRedo;
+    }
+
+    private void RestoreFromUndoState(UndoState state)
+    {
+        var options = SsotJsonOptions.Create();
+        if (!string.IsNullOrWhiteSpace(state.AnswersJson))
+        {
+            var restored = JsonSerializer.Deserialize<WizardAnswers>(state.AnswersJson, options);
+            if (restored != null)
+            {
+                Answers.ProjectName = restored.ProjectName;
+                Answers.Description = restored.Description;
+                Answers.Audience = restored.Audience;
+                Answers.HelpsThem = restored.HelpsThem;
+                Answers.FeatureListText = restored.FeatureListText;
+                Answers.ProductRules = restored.ProductRules;
+                Answers.LookStyle = restored.LookStyle;
+                Answers.Connectivity = restored.Connectivity;
+                Answers.Accounts = restored.Accounts;
+                Answers.MultiDevice = restored.MultiDevice;
+                Answers.Notifications = restored.Notifications;
+                Answers.NotificationNotes = restored.NotificationNotes;
+                Answers.SavePastResults = restored.SavePastResults;
+                Answers.IncludeSettingsScreen = restored.IncludeSettingsScreen;
+                Answers.Theme = restored.Theme;
+                Answers.NavigationPattern = restored.NavigationPattern;
+                Answers.ProfileId = restored.ProfileId;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(state.DocumentJson))
+        {
+            Document = JsonSerializer.Deserialize<SsotDocument>(state.DocumentJson, options);
+            if (Document != null)
+            {
+                var profile = _schemaCatalog.RequireById(Answers.ProfileId);
+                _documents.ReplaceDocument(Document, profile, _documents.FilePath);
+            }
+        }
+
+        CurrentStep = state.Step;
+        SyncReviewSelections();
+        SyncClickFlowsFromDocument();
+        UpdateUndoState();
+        MarkDirty();
+    }
+
+    public void RefreshArtifactPreviews()
+    {
+        if (Document is null) return;
+        BlueprintJsonPreview = new JsonExporter().ToJson(Document);
+        AgentsMdPreview = AgentPackageExporter.BuildAgentsMd(Document);
+        SpecificationsPreview = AgentPackageExporter.BuildRequirements(Document);
+        TasksPreview = string.Join("\n\n---\n\n", AgentPackageExporter.BuildTasks(Document).Select(t => t.Body));
+    }
+
+    [RelayCommand]
     private void AddScreen()
     {
         EnsureDocumentFromIdea();
         if (Document is null) return;
 
+        RecordUndo("Add Screen");
         var n = Document.Ui.Screens.Count(s => !IsSystemScreen(s)) + 1;
         var screen = new ScreenInfo
         {
             Id = $"screen{n}",
             Title = $"Screen {n}",
-            Route = n == 1 ? "/" : $"/screen{n}"
+            Route = n == 1 ? "/" : $"/screen{n}",
+            ScreenType = Answers.ProfileId.Equals("android_app", StringComparison.OrdinalIgnoreCase) ? "Screen" : "Dialog"
         };
         Document.Ui.Screens.Add(screen);
         ReviewScreens.Add(screen);
@@ -645,6 +857,7 @@ public partial class MainWindowViewModel : ObservableObject
             return;
         }
 
+        RecordUndo($"Remove Screen '{SelectedScreen.Title}'");
         Document.Ui.Screens.Remove(SelectedScreen);
         ReviewScreens.Remove(SelectedScreen);
         SelectedScreen = ReviewScreens.FirstOrDefault();
@@ -656,6 +869,36 @@ public partial class MainWindowViewModel : ObservableObject
 
     [RelayCommand]
     private void MoveScreenDown() => MoveSelectedScreen(1);
+
+    [RelayCommand]
+    private void MoveControlUp() => MoveSelectedControl(-1);
+
+    [RelayCommand]
+    private void MoveControlDown() => MoveSelectedControl(1);
+
+    private void MoveSelectedControl(int delta)
+    {
+        if (SelectedScreen is null || SelectedControl is null) return;
+        var index = SelectedScreen.Controls.IndexOf(SelectedControl);
+        var newIndex = index + delta;
+        if (index < 0 || newIndex < 0 || newIndex >= SelectedScreen.Controls.Count) return;
+
+        RecordUndo("Reorder Control");
+        var control = SelectedControl;
+        SelectedScreen.Controls.RemoveAt(index);
+        SelectedScreen.Controls.Insert(newIndex, control);
+
+        var reviewIndex = ReviewControls.IndexOf(control);
+        if (reviewIndex >= 0)
+        {
+            var reviewNew = Math.Clamp(reviewIndex + delta, 0, ReviewControls.Count - 1);
+            ReviewControls.Move(reviewIndex, reviewNew);
+        }
+
+        SelectedControl = control;
+        ScreenCaption = BlueprintCompiler.ScreenCaption(SelectedScreen);
+        MarkDirty();
+    }
 
     [RelayCommand]
     private void AddChoiceList() => AddThing(BlueprintThingKind.ChoiceList);
@@ -673,6 +916,7 @@ public partial class MainWindowViewModel : ObservableObject
     private void RemoveThing()
     {
         if (SelectedScreen is null || SelectedControl is null) return;
+        RecordUndo($"Remove Thing '{SelectedControl.Label}'");
         SelectedScreen.Controls.Remove(SelectedControl);
         ReviewControls.Remove(SelectedControl);
         SelectedControl = ReviewControls.FirstOrDefault();
@@ -689,6 +933,7 @@ public partial class MainWindowViewModel : ObservableObject
             return;
         }
 
+        RecordUndo($"Add {WizardAnswers.ThingLabel(kind)}");
         var profile = _schemaCatalog.RequireById(Answers.ProfileId);
         var types = BlueprintCompiler.ResolveControlTypes(profile);
         var control = BlueprintCompiler.CreateThing(kind, types, SelectedScreen.Controls.Count + 1);
@@ -707,6 +952,7 @@ public partial class MainWindowViewModel : ObservableObject
         var newIndex = index + delta;
         if (index < 0 || newIndex < 0 || newIndex >= Document.Ui.Screens.Count) return;
 
+        RecordUndo("Reorder Screen");
         var screen = SelectedScreen;
         Document.Ui.Screens.RemoveAt(index);
         Document.Ui.Screens.Insert(newIndex, screen);

@@ -1,10 +1,11 @@
-﻿<Window x:Class="CoreAiArchitect.App.MainWindow"
+<Window x:Class="CoreAiArchitect.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:conv="clr-namespace:CoreAiArchitect.App.Converters"
+        xmlns:ctrl="clr-namespace:CoreAiArchitect.App.Controls"
         Title="{Binding WindowTitle}"
-        Height="800" Width="1180"
-        MinHeight="640" MinWidth="960"
+        Height="840" Width="1220"
+        MinHeight="660" MinWidth="1020"
         WindowStartupLocation="CenterScreen">
   <Window.Resources>
     <conv:WizardStepVisibilityConverter x:Key="StepVis"/>
@@ -13,6 +14,12 @@
     <conv:HubStatusBrushConverter x:Key="HubStatusBrush"/>
   </Window.Resources>
 
+  <Window.InputBindings>
+    <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}"/>
+    <KeyBinding Key="Y" Modifiers="Control" Command="{Binding RedoCommand}"/>
+  </Window.InputBindings>
+
+  <Border BorderThickness="1" BorderBrush="{DynamicResource OuterBorderBrush}">
   <DockPanel>
     <Menu DockPanel.Dock="Top">
       <MenuItem Header="_File">
@@ -27,12 +34,16 @@
         <Separator/>
         <MenuItem Header="E_xit" Click="Exit_Click"/>
       </MenuItem>
+      <MenuItem Header="_Edit">
+        <MenuItem Header="_Undo" Command="{Binding UndoCommand}" InputGestureText="Ctrl+Z"/>
+        <MenuItem Header="_Redo" Command="{Binding RedoCommand}" InputGestureText="Ctrl+Y"/>
+      </MenuItem>
       <MenuItem Header="_Help">
         <MenuItem Header="_How this works" Command="{Binding ShowHelpCommand}"/>
       </MenuItem>
     </Menu>
 
-    <Border DockPanel.Dock="Top" Background="{StaticResource HeaderGradient}" Padding="24,18">
+    <Border DockPanel.Dock="Top" Background="{DynamicResource HeaderGradient}" Padding="24,18">
       <Grid>
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="*"/>
@@ -45,32 +56,37 @@
                      Foreground="#F7EDE8" Margin="0,4,0,0" TextWrapping="Wrap"/>
         </StackPanel>
         <StackPanel Grid.Column="1" VerticalAlignment="Center">
-          <TextBlock Text="{Binding ProgressText}" Foreground="White" HorizontalAlignment="Right" Margin="0,0,0,6"
-                     TextWrapping="Wrap" TextAlignment="Right"/>
+          <DockPanel Margin="0,0,0,6">
+            <Button DockPanel.Dock="Left" Content="🌓 Theme" Command="{Binding ToggleDarkModeCommand}"
+                    Style="{DynamicResource GhostButton}" Padding="8,2" Foreground="White" FontSize="11"
+                    ToolTip="Toggle between Light and Dark mode"/>
+            <TextBlock Text="{Binding ProgressText}" Foreground="White" HorizontalAlignment="Right"
+                       TextWrapping="Wrap" TextAlignment="Right"/>
+          </DockPanel>
           <ProgressBar Height="8" Minimum="0" Maximum="1" Value="{Binding ProgressValue}"
                        Foreground="{StaticResource CoralBrush}" Background="#66FFFFFF"/>
         </StackPanel>
       </Grid>
     </Border>
 
-    <StatusBar DockPanel.Dock="Bottom" Background="{StaticResource SandDeepBrush}">
+    <StatusBar DockPanel.Dock="Bottom" Background="{DynamicResource SandDeepBrush}">
       <StatusBarItem>
         <TextBlock Text="{Binding StatusText}" Margin="8,0"/>
       </StatusBarItem>
     </StatusBar>
 
-    <Border Margin="24" Style="{StaticResource WizardCard}" Padding="28">
+    <Border Margin="24" Style="{DynamicResource WizardCard}" Padding="28">
       <DockPanel>
         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,20">
           <TextBlock Text="{Binding StepTitle}" FontFamily="{StaticResource DisplayFont}"
-                     FontSize="26" FontWeight="SemiBold" Foreground="{StaticResource TealBrush}"/>
-          <TextBlock Text="{Binding StepSubtitle}" Margin="0,6,0,0" TextWrapping="Wrap" Foreground="#445"/>
+                     FontSize="26" FontWeight="SemiBold" Foreground="{DynamicResource TealBrush}"/>
+          <TextBlock Text="{Binding StepSubtitle}" Margin="0,6,0,0" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}"/>
         </StackPanel>
 
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
-          <Button Content="Back" Command="{Binding BackCommand}" Style="{StaticResource GhostButton}"
+          <Button Content="Back" Command="{Binding BackCommand}" Style="{DynamicResource GhostButton}"
                   Margin="0,0,10,0" IsEnabled="{Binding CanGoBack}"/>
-          <Button Content="Next" Command="{Binding NextCommand}" Style="{StaticResource PrimaryButton}"
+          <Button Content="Next" Command="{Binding NextCommand}" Style="{DynamicResource PrimaryButton}"
                   Visibility="{Binding CanGoNext, Converter={StaticResource BoolVis}}"/>
         </StackPanel>
 
@@ -78,11 +94,11 @@
           <Grid>
             <!-- Ad-Lib (Your idea) -->
             <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource StepVis}, ConverterParameter=YourIdea}">
-              <TextBlock Style="{StaticResource FieldLabel}" Text="What kind of app?"/>
+              <TextBlock Style="{DynamicResource FieldLabel}" Text="What kind of app?"/>
               <ItemsControl ItemsSource="{Binding AppKinds}" Margin="0,0,0,16">
                 <ItemsControl.ItemsPanel>
                   <ItemsPanelTemplate>
-                    <UniformGrid Columns="3"/>
+                    <UniformGrid Columns="4"/>
                   </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
@@ -91,30 +107,30 @@
                             MouseLeftButtonUp="AppKindCard_OnClick" Tag="{Binding}">
                       <Border.Style>
                         <Style TargetType="Border">
-                          <Setter Property="Background" Value="White"/>
-                          <Setter Property="BorderBrush" Value="#D8CFC0"/>
+                          <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+                          <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
                           <Setter Property="BorderThickness" Value="1"/>
                           <Style.Triggers>
                             <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                              <Setter Property="Background" Value="#FFF6F3"/>
-                              <Setter Property="BorderBrush" Value="{StaticResource CoralBrush}"/>
+                              <Setter Property="Background" Value="{DynamicResource InnerCardBackgroundBrush}"/>
+                              <Setter Property="BorderBrush" Value="{DynamicResource CoralBrush}"/>
                               <Setter Property="BorderThickness" Value="2"/>
                             </DataTrigger>
                           </Style.Triggers>
                         </Style>
                       </Border.Style>
                       <StackPanel>
-                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="15" Foreground="{StaticResource TealBrush}"/>
-                        <TextBlock Text="{Binding Description}" TextWrapping="Wrap" Margin="0,8,0,0" Foreground="#555"/>
+                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="15" Foreground="{DynamicResource TealBrush}"/>
+                        <TextBlock Text="{Binding Description}" TextWrapping="Wrap" Margin="0,8,0,0" Foreground="{DynamicResource TextSecondaryBrush}"/>
                       </StackPanel>
                     </Border>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
 
-              <Border Background="#FFFCF8" BorderBrush="#E2D8C8" BorderThickness="1" CornerRadius="10" Padding="18" Margin="0,0,0,16">
+              <Border Background="{DynamicResource InnerCardBackgroundBrush}" BorderBrush="{DynamicResource InnerCardBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="18" Margin="0,0,0,16">
                 <StackPanel>
-                  <TextBlock Text="Guided Ad-Lib" FontWeight="SemiBold" FontSize="16" Foreground="{StaticResource TealBrush}" Margin="0,0,0,12"/>
+                  <TextBlock Text="Guided Ad-Lib" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TealBrush}" Margin="0,0,0,12"/>
 
                   <WrapPanel Margin="0,0,0,10">
                     <TextBlock Text="I'm building an app called " VerticalAlignment="Center" FontSize="15"/>
@@ -144,7 +160,7 @@
                              AcceptsReturn="True" TextWrapping="Wrap" MinHeight="72" FontSize="14"
                              ToolTip="One capability per line. On a blank template these become starter buttons."/>
                     <TextBlock Text="One per line — on a blank start these become buttons on your first screen."
-                               Foreground="#888" FontSize="12" Margin="0,4,0,0"/>
+                               Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,4,0,0"/>
                   </StackPanel>
 
                   <Grid Margin="0,0,0,8">
@@ -167,22 +183,22 @@
                 </StackPanel>
               </Border>
 
-              <TextBlock Style="{StaticResource FieldLabel}" Text="Product rules (optional but powerful)"/>
-              <TextBlock Text="{Binding DescriptionGuidance}" TextWrapping="Wrap" Foreground="#666" Margin="0,0,0,6"/>
+              <TextBlock Style="{DynamicResource FieldLabel}" Text="Product rules (optional but powerful)"/>
+              <TextBlock Text="{Binding DescriptionGuidance}" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,6"/>
               <TextBox Text="{Binding Answers.ProductRules, UpdateSourceTrigger=PropertyChanged}"
                        AcceptsReturn="True" TextWrapping="Wrap" MinHeight="80" Margin="0,0,0,8"
                        LostFocus="Description_OnLostFocus"/>
               <Button Content="Get tips from my description" Command="{Binding RefreshTipsCommand}"
-                      Style="{StaticResource GhostButton}" HorizontalAlignment="Left" Margin="0,0,0,10" Padding="12,6"/>
+                      Style="{DynamicResource GhostButton}" HorizontalAlignment="Left" Margin="0,0,0,10" Padding="12,6"/>
               <ItemsControl ItemsSource="{Binding DescriptionTips}" Margin="0,0,0,14">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
-                    <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,0,0,4" Foreground="{StaticResource TealBrush}"/>
+                    <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,0,0,4" Foreground="{DynamicResource TealBrush}"/>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
 
-              <TextBlock Style="{StaticResource FieldLabel}" Text="Start from a template (optional)"/>
+              <TextBlock Style="{DynamicResource FieldLabel}" Text="Start from a template (optional)"/>
               <ItemsControl ItemsSource="{Binding Templates}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
@@ -190,12 +206,12 @@
                             MouseLeftButtonUp="TemplateCard_OnClick" Tag="{Binding}">
                       <Border.Style>
                         <Style TargetType="Border">
-                          <Setter Property="Background" Value="White"/>
-                          <Setter Property="BorderBrush" Value="#E2D8C8"/>
+                          <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+                          <Setter Property="BorderBrush" Value="{DynamicResource InnerCardBorderBrush}"/>
                           <Setter Property="BorderThickness" Value="1"/>
                           <Style.Triggers>
                             <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                              <Setter Property="BorderBrush" Value="{StaticResource TealBrush}"/>
+                              <Setter Property="BorderBrush" Value="{DynamicResource TealBrush}"/>
                               <Setter Property="BorderThickness" Value="2"/>
                             </DataTrigger>
                           </Style.Triggers>
@@ -203,7 +219,7 @@
                       </Border.Style>
                       <StackPanel>
                         <TextBlock Text="{Binding Title}" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding Description}" TextWrapping="Wrap" Foreground="#666" Margin="0,4,0,0"/>
+                        <TextBlock Text="{Binding Description}" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0"/>
                       </StackPanel>
                     </Border>
                   </DataTemplate>
@@ -213,31 +229,32 @@
 
             <!-- What you need (gap questions) -->
             <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource StepVis}, ConverterParameter=WhatYouNeed}">
-              <TextBlock Style="{StaticResource FieldLabel}" Text="Will different people have their own accounts?"/>
+              <TextBlock Style="{DynamicResource FieldLabel}" Text="Will different people have their own accounts?"/>
               <ComboBox ItemsSource="{Binding AccountsOptions}" SelectedItem="{Binding SelectedAccountsLabel}"
                         Margin="0,0,0,6" FontSize="14"/>
-              <TextBlock Text="{Binding AccountsHelp}" TextWrapping="Wrap" Foreground="#666" Margin="0,0,0,16" FontSize="12"/>
+              <TextBlock Text="{Binding AccountsHelp}" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,16" FontSize="12"/>
 
-              <TextBlock Style="{StaticResource FieldLabel}" Text="Should information follow the user between devices?"/>
+              <TextBlock Style="{DynamicResource FieldLabel}" Text="Should information follow the user between devices?"/>
               <ComboBox ItemsSource="{Binding MultiDeviceOptions}" SelectedItem="{Binding SelectedMultiDeviceLabel}"
                         Margin="0,0,0,16" FontSize="14"/>
 
               <CheckBox Content="Should your app remind or notify users about anything?"
                         IsChecked="{Binding Notifications}" Margin="0,0,0,10" FontSize="15"/>
               <StackPanel Visibility="{Binding ShowNotificationNotes, Converter={StaticResource BoolVis}}" Margin="0,0,0,8">
-                <TextBlock Style="{StaticResource FieldLabel}" Text="What should it remind them about?"/>
+                <TextBlock Style="{DynamicResource FieldLabel}" Text="What should it remind them about?"/>
                 <TextBox Text="{Binding Answers.NotificationNotes, UpdateSourceTrigger=PropertyChanged}"
                          AcceptsReturn="True" TextWrapping="Wrap" MinHeight="60"/>
               </StackPanel>
-              <TextBlock TextWrapping="Wrap" Foreground="#666"
+              <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}"
                          Text="These answers update your blueprint requirements and description. Technical stack choices stay on Recommended unless you change them later in Expert detail."/>
             </StackPanel>
 
             <!-- Screens -->
             <Grid Visibility="{Binding CurrentStep, Converter={StaticResource StepVis}, ConverterParameter=Screens}">
               <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="240"/>
+                <ColumnDefinition Width="200"/>
                 <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="280"/>
               </Grid.ColumnDefinitions>
               <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -248,52 +265,70 @@
               <StackPanel Grid.Column="0" Margin="0,0,16,0">
                 <TextBlock Text="Screens" FontWeight="SemiBold" Margin="0,0,0,8"/>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                  <Button Content="Add Screen" Command="{Binding AddScreenCommand}" Style="{StaticResource SecondaryButton}"
+                  <Button Content="Add Screen" Command="{Binding AddScreenCommand}" Style="{DynamicResource SecondaryButton}"
                           Padding="10,6" Margin="0,0,8,0"/>
-                  <Button Content="Remove" Command="{Binding RemoveScreenCommand}" Style="{StaticResource GhostButton}" Padding="10,6"/>
+                  <Button Content="Remove" Command="{Binding RemoveScreenCommand}" Style="{DynamicResource GhostButton}" Padding="10,6"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal">
-                  <Button Content="Move Up" Command="{Binding MoveScreenUpCommand}" Style="{StaticResource GhostButton}"
+                  <Button Content="Move Up" Command="{Binding MoveScreenUpCommand}" Style="{DynamicResource GhostButton}"
                           Padding="10,6" Margin="0,0,8,0"/>
-                  <Button Content="Move Down" Command="{Binding MoveScreenDownCommand}" Style="{StaticResource GhostButton}" Padding="10,6"/>
+                  <Button Content="Move Down" Command="{Binding MoveScreenDownCommand}" Style="{DynamicResource GhostButton}" Padding="10,6"/>
                 </StackPanel>
               </StackPanel>
 
               <StackPanel Grid.Column="1">
-                <TextBlock Style="{StaticResource FieldLabel}" Text="Screen title"/>
-                <TextBox Text="{Binding SelectedScreen.Title, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
+                <Grid Margin="0,0,0,10">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="130"/>
+                  </Grid.ColumnDefinitions>
+                  <StackPanel Grid.Column="0">
+                    <TextBlock Style="{DynamicResource FieldLabel}" Text="Screen title"/>
+                    <TextBox Text="{Binding SelectedScreen.Title, UpdateSourceTrigger=PropertyChanged}"/>
+                  </StackPanel>
+                  <StackPanel Grid.Column="2">
+                    <TextBlock Style="{DynamicResource FieldLabel}" Text="Screen type"/>
+                    <ComboBox ItemsSource="{Binding ScreenTypeOptions}" SelectedItem="{Binding SelectedScreen.ScreenType}"/>
+                  </StackPanel>
+                </Grid>
                 <TextBlock Text="Add a thing" FontWeight="SemiBold" Margin="0,0,0,6"/>
                 <WrapPanel Margin="0,0,0,6">
-                  <Button Content="Choice list" Command="{Binding AddChoiceListCommand}" Style="{StaticResource SecondaryButton}"
+                  <Button Content="Choice list" Command="{Binding AddChoiceListCommand}" Style="{DynamicResource SecondaryButton}"
                           Padding="10,6" Margin="0,0,8,6" ToolTip="Let people pick one option"/>
-                  <Button Content="Place to type" Command="{Binding AddPlaceToTypeCommand}" Style="{StaticResource SecondaryButton}"
+                  <Button Content="Place to type" Command="{Binding AddPlaceToTypeCommand}" Style="{DynamicResource SecondaryButton}"
                           Padding="10,6" Margin="0,0,8,6" ToolTip="A box for numbers or text"/>
-                  <Button Content="Button" Command="{Binding AddButtonThingCommand}" Style="{StaticResource SecondaryButton}"
+                  <Button Content="Button" Command="{Binding AddButtonThingCommand}" Style="{DynamicResource SecondaryButton}"
                           Padding="10,6" Margin="0,0,8,6" ToolTip="Something people click to do work"/>
-                  <Button Content="Results list" Command="{Binding AddResultsListCommand}" Style="{StaticResource SecondaryButton}"
+                  <Button Content="Results list" Command="{Binding AddResultsListCommand}" Style="{DynamicResource SecondaryButton}"
                           Padding="10,6" Margin="0,0,8,6" ToolTip="Show generated or saved items"/>
-                  <Button Content="Remove" Command="{Binding RemoveThingCommand}" Style="{StaticResource GhostButton}" Padding="10,6" Margin="0,0,0,6"/>
+                  <Button Content="Remove" Command="{Binding RemoveThingCommand}" Style="{DynamicResource GhostButton}" Padding="10,6" Margin="0,0,0,6"/>
                 </WrapPanel>
-                <TextBlock Text="{Binding ScreenCaption}" TextWrapping="Wrap" Foreground="#666" FontSize="13" Margin="0,0,0,8"/>
+                <TextBlock Text="{Binding ScreenCaption}" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" Margin="0,0,0,8"/>
               </StackPanel>
 
               <ListBox Grid.Row="1" Grid.Column="0" Margin="0,0,16,12"
                        ItemsSource="{Binding ReviewScreens}" SelectedItem="{Binding SelectedScreen}"
                        DisplayMemberPath="Title" MinHeight="120"/>
 
-              <ListBox Grid.Row="1" Grid.Column="1" Margin="0,8,0,12"
-                       ItemsSource="{Binding ReviewControls}" SelectedItem="{Binding SelectedControl}"
-                       MinHeight="120" SelectionChanged="Review_OnChanged">
-                <ListBox.ItemTemplate>
-                  <DataTemplate>
-                    <TextBlock>
-                      <Run Text="{Binding Label, Mode=OneWay}"/>
-                      <Run Text="  —  " Foreground="#888"/>
-                      <Run Text="{Binding Type, Mode=OneWay}" Foreground="#888"/>
-                    </TextBlock>
-                  </DataTemplate>
-                </ListBox.ItemTemplate>
-              </ListBox>
+              <DockPanel Grid.Row="1" Grid.Column="1" Margin="0,8,0,12">
+                <StackPanel DockPanel.Dock="Right" Margin="8,0,0,0" VerticalAlignment="Center">
+                  <Button Content="▲" Command="{Binding MoveControlUpCommand}" ToolTip="Move control up" Style="{DynamicResource GhostButton}" Padding="8,4" Margin="0,0,0,6"/>
+                  <Button Content="▼" Command="{Binding MoveControlDownCommand}" ToolTip="Move control down" Style="{DynamicResource GhostButton}" Padding="8,4"/>
+                </StackPanel>
+                <ListBox ItemsSource="{Binding ReviewControls}" SelectedItem="{Binding SelectedControl}"
+                         MinHeight="120" SelectionChanged="Review_OnChanged">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock>
+                        <Run Text="{Binding Label, Mode=OneWay}"/>
+                        <Run Text="  —  " Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <Run Text="{Binding Type, Mode=OneWay}" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                      </TextBlock>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+              </DockPanel>
 
               <Grid Grid.Row="2" Grid.Column="1">
                 <Grid.ColumnDefinitions>
@@ -302,14 +337,19 @@
                   <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0">
-                  <TextBlock Style="{StaticResource FieldLabel}" Text="Name people will see"/>
+                  <TextBlock Style="{DynamicResource FieldLabel}" Text="Name people will see"/>
                   <TextBox Text="{Binding SelectedControl.Label, UpdateSourceTrigger=PropertyChanged}"/>
                 </StackPanel>
                 <StackPanel Grid.Column="2">
-                  <TextBlock Style="{StaticResource FieldLabel}" Text="Internal id (advanced)"/>
+                  <TextBlock Style="{DynamicResource FieldLabel}" Text="Internal id (advanced)"/>
                   <TextBox Text="{Binding SelectedControl.Id, UpdateSourceTrigger=PropertyChanged}"/>
                 </StackPanel>
               </Grid>
+
+              <!-- Live Wireframe Preview -->
+              <Border Grid.Column="2" Grid.Row="0" Grid.RowSpan="3" Margin="14,0,0,0">
+                <ctrl:WireframePreviewControl Screen="{Binding SelectedScreen}" ProfileId="{Binding Answers.ProfileId}"/>
+              </Border>
             </Grid>
 
             <!-- When they click -->
@@ -323,8 +363,8 @@
                 <ListBox ItemsSource="{Binding ClickFlows}" SelectedItem="{Binding SelectedClickFlow}" DisplayMemberPath="ButtonLabel"/>
               </DockPanel>
               <StackPanel Grid.Column="1" Margin="16,0,0,0">
-                <TextBlock Style="{StaticResource FieldLabel}" Text="What happens when someone uses this button?"/>
-                <TextBlock Text="{Binding ClicksGuidance}" TextWrapping="Wrap" Foreground="#666" Margin="0,0,0,8"/>
+                <TextBlock Style="{DynamicResource FieldLabel}" Text="What happens when someone uses this button?"/>
+                <TextBlock Text="{Binding ClicksGuidance}" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,8"/>
                 <TextBox Text="{Binding SelectedClickFlow.StepsText, UpdateSourceTrigger=PropertyChanged}"
                          AcceptsReturn="True" TextWrapping="Wrap" MinHeight="160"
                          VerticalScrollBarVisibility="Auto"/>
@@ -337,7 +377,7 @@
                         IsChecked="{Binding SavePastResults}" Margin="0,0,0,14" FontSize="15"/>
               <CheckBox Content="Include a settings screen?"
                         IsChecked="{Binding IncludeSettingsScreen}" Margin="0,0,0,14" FontSize="15"/>
-              <TextBlock TextWrapping="Wrap" Foreground="#666"
+              <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}"
                          Text="Leave both off for a simple app. You can always change this later — History and Settings only appear when you turn them on."/>
             </StackPanel>
 
@@ -349,17 +389,17 @@
                 <ColumnDefinition Width="*"/>
               </Grid.ColumnDefinitions>
 
-              <Border Background="#FFFCF8" BorderBrush="#E2D8C8" BorderThickness="1" CornerRadius="10" Padding="14">
+              <Border Background="{DynamicResource InnerCardBackgroundBrush}" BorderBrush="{DynamicResource InnerCardBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="14">
                 <DockPanel>
                   <StackPanel DockPanel.Dock="Top" Margin="0,0,0,12">
                     <TextBlock Text="{Binding HubProgressCaption}" TextWrapping="Wrap" FontWeight="SemiBold"
-                               Foreground="{StaticResource TealBrush}"/>
+                               Foreground="{DynamicResource TealBrush}"/>
                     <ProgressBar Height="8" Minimum="0" Maximum="100" Value="{Binding HubReadyPercent}" Margin="0,8,0,0"
-                                 Foreground="{StaticResource CoralBrush}" Background="#E8DFD0"/>
+                                 Foreground="{DynamicResource CoralBrush}" Background="{DynamicResource SandDeepBrush}"/>
                     <TextBlock Margin="0,10,0,4" FontSize="13" Text="Detail level"/>
                     <ComboBox ItemsSource="{Binding DetailLevelOptions}"
                               SelectedItem="{Binding SelectedDetailLevelLabel}"/>
-                    <TextBlock TextWrapping="Wrap" Foreground="#888" FontSize="11" Margin="0,6,0,0"
+                    <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" Margin="0,6,0,0"
                                Text="Simple hides tech details. Standard shows the stack. Expert lets you edit theme and navigation."/>
                   </StackPanel>
                   <TextBlock DockPanel.Dock="Top" Text="Sections" FontWeight="SemiBold" Margin="0,0,0,8"/>
@@ -374,7 +414,7 @@
                                        Foreground="{Binding Status, Converter={StaticResource HubStatusBrush}}"/>
                             <TextBlock Text="{Binding Title}" FontWeight="SemiBold"/>
                           </StackPanel>
-                          <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" Foreground="#555" FontSize="12" Margin="18,2,0,0"/>
+                          <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="18,2,0,0"/>
                         </StackPanel>
                       </DataTemplate>
                     </ListBox.ItemTemplate>
@@ -383,15 +423,34 @@
               </Border>
 
               <StackPanel Grid.Column="2">
-                <TextBlock Text="Your app story" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                <TextBox Text="{Binding AppStory}" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True"
-                         MinHeight="120" Margin="0,0,0,12" Background="#FFFCF8"
-                         VerticalScrollBarVisibility="Auto"/>
+                <TextBlock Text="App Blueprint Artifacts &amp; Story" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                <TabControl SelectedIndex="{Binding SelectedArtifactTabIndex}" Margin="0,0,0,12" MinHeight="160" MaxHeight="320">
+                  <TabItem Header="App Story">
+                    <TextBox Text="{Binding AppStory}" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True"
+                             Margin="4" Background="{DynamicResource InnerCardBackgroundBrush}" VerticalScrollBarVisibility="Auto" BorderThickness="0"/>
+                  </TabItem>
+                  <TabItem Header="Blueprint JSON">
+                    <TextBox Text="{Binding BlueprintJsonPreview}" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True"
+                             Margin="4" FontFamily="Consolas" FontSize="11" Background="{DynamicResource InnerCardBackgroundBrush}" VerticalScrollBarVisibility="Auto" BorderThickness="0"/>
+                  </TabItem>
+                  <TabItem Header="AGENTS.md">
+                    <TextBox Text="{Binding AgentsMdPreview}" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True"
+                             Margin="4" FontFamily="Consolas" FontSize="11" Background="{DynamicResource InnerCardBackgroundBrush}" VerticalScrollBarVisibility="Auto" BorderThickness="0"/>
+                  </TabItem>
+                  <TabItem Header="Specifications">
+                    <TextBox Text="{Binding SpecificationsPreview}" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True"
+                             Margin="4" FontFamily="Consolas" FontSize="11" Background="{DynamicResource InnerCardBackgroundBrush}" VerticalScrollBarVisibility="Auto" BorderThickness="0"/>
+                  </TabItem>
+                  <TabItem Header="Tasks">
+                    <TextBox Text="{Binding TasksPreview}" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True"
+                             Margin="4" FontFamily="Consolas" FontSize="11" Background="{DynamicResource InnerCardBackgroundBrush}" VerticalScrollBarVisibility="Auto" BorderThickness="0"/>
+                  </TabItem>
+                </TabControl>
 
                 <StackPanel Visibility="{Binding ShowStandardDetails, Converter={StaticResource BoolVis}}" Margin="0,0,0,12">
                   <TextBlock Text="Technology summary" FontWeight="SemiBold" Margin="0,0,0,6"/>
                   <TextBox Text="{Binding TechSummary}" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True"
-                           MinHeight="90" Background="#F7F4EE" FontFamily="Consolas"/>
+                           MinHeight="90" Background="{DynamicResource InnerCardBackgroundBrush}" FontFamily="Consolas"/>
                 </StackPanel>
 
                 <StackPanel Visibility="{Binding ShowExpertDetails, Converter={StaticResource BoolVis}}" Margin="0,0,0,12">
@@ -408,27 +467,27 @@
                       <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
                     <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,0,10">
-                      <TextBlock Style="{StaticResource FieldLabel}" Text="Theme"/>
+                      <TextBlock Style="{DynamicResource FieldLabel}" Text="Theme"/>
                       <ComboBox ItemsSource="{Binding ThemeOptions}" SelectedItem="{Binding Answers.Theme}"/>
                     </StackPanel>
                     <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,0,10">
-                      <TextBlock Style="{StaticResource FieldLabel}" Text="Navigation"/>
+                      <TextBlock Style="{DynamicResource FieldLabel}" Text="Navigation"/>
                       <ComboBox ItemsSource="{Binding NavigationOptions}" SelectedItem="{Binding Answers.NavigationPattern}"/>
                     </StackPanel>
                     <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,0,10">
-                      <TextBlock Style="{StaticResource FieldLabel}" Text="UI framework"/>
+                      <TextBlock Style="{DynamicResource FieldLabel}" Text="UI framework"/>
                       <TextBox Text="{Binding Answers.UiFramework, UpdateSourceTrigger=PropertyChanged}"/>
                     </StackPanel>
                     <StackPanel Grid.Row="1" Grid.Column="2" Margin="0,0,0,10">
-                      <TextBlock Style="{StaticResource FieldLabel}" Text="Language"/>
+                      <TextBlock Style="{DynamicResource FieldLabel}" Text="Language"/>
                       <TextBox Text="{Binding Answers.Language, UpdateSourceTrigger=PropertyChanged}"/>
                     </StackPanel>
                     <StackPanel Grid.Row="2" Grid.Column="0">
-                      <TextBlock Style="{StaticResource FieldLabel}" Text="Architecture decision"/>
+                      <TextBlock Style="{DynamicResource FieldLabel}" Text="Architecture decision"/>
                       <ComboBox ItemsSource="{Binding DecisionModeOptions}" SelectedItem="{Binding SelectedArchitectureDecisionLabel}"/>
                     </StackPanel>
                     <StackPanel Grid.Row="2" Grid.Column="2">
-                      <TextBlock Style="{StaticResource FieldLabel}" Text="Storage decision"/>
+                      <TextBlock Style="{DynamicResource FieldLabel}" Text="Storage decision"/>
                       <ComboBox ItemsSource="{Binding DecisionModeOptions}" SelectedItem="{Binding SelectedStorageDecisionLabel}"/>
                     </StackPanel>
                   </Grid>
@@ -437,28 +496,28 @@
                 <StackPanel Margin="0,0,0,12">
                   <TextBlock Text="Recommendations" FontWeight="SemiBold" Margin="0,0,0,6"/>
                   <TextBlock Text="Deterministic suggestions with a Why? — not AI. Use Detail level Standard/Expert for tech summary and overrides."
-                             TextWrapping="Wrap" Foreground="#888" FontSize="11" Margin="0,0,0,8"/>
+                             TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" Margin="0,0,0,8"/>
                   <ItemsControl ItemsSource="{Binding Recommendations}" Margin="0,0,0,8">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate>
-                        <Border BorderBrush="#E2D8C8" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,8" Background="White">
+                        <Border BorderBrush="{DynamicResource InnerCardBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,8" Background="{DynamicResource CardBrush}">
                           <DockPanel>
                             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
                               <Button Content="Why?" Command="{Binding DataContext.ExplainRecommendationCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                      CommandParameter="{Binding}" Style="{StaticResource GhostButton}" Padding="10,4" Margin="0,0,6,0"/>
+                                      CommandParameter="{Binding}" Style="{DynamicResource GhostButton}" Padding="10,4" Margin="0,0,6,0"/>
                               <Button Content="Use" Command="{Binding DataContext.ApplyRecommendationCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                      CommandParameter="{Binding}" Style="{StaticResource SecondaryButton}" Padding="10,4"
+                                      CommandParameter="{Binding}" Style="{DynamicResource SecondaryButton}" Padding="10,4"
                                       IsEnabled="{Binding CanApply}"/>
                             </StackPanel>
                             <StackPanel>
                               <TextBlock FontWeight="SemiBold">
                                 <Run Text="{Binding Title, Mode=OneWay}"/>
                                 <Run Text="  "/>
-                                <Run Text="{Binding SuggestedValue, Mode=OneWay}" Foreground="#0F3D3E"/>
+                                <Run Text="{Binding SuggestedValue, Mode=OneWay}" Foreground="{DynamicResource TealBrush}"/>
                               </TextBlock>
-                              <TextBlock Text="{Binding Category}" Foreground="#888" FontSize="11"/>
-                              <TextBlock Text="{Binding Why}" TextWrapping="Wrap" Foreground="#555" Margin="0,4,0,0" FontSize="12"/>
-                              <TextBlock Foreground="#888" FontSize="11" Margin="0,4,0,0"
+                              <TextBlock Text="{Binding Category}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11"/>
+                              <TextBlock Text="{Binding Why}" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0" FontSize="12"/>
+                              <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" Margin="0,4,0,0"
                                          Text="{Binding RuleId, StringFormat=Rule: {0}}"/>
                             </StackPanel>
                           </DockPanel>
@@ -468,7 +527,7 @@
                   </ItemsControl>
                 </StackPanel>
 
-                <TextBlock Text="{Binding HandOffGuidance}" TextWrapping="Wrap" Foreground="#666" Margin="0,0,0,12"/>
+                <TextBlock Text="{Binding HandOffGuidance}" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,12"/>
                 <TextBlock Text="{Binding ReadySummary}" TextWrapping="Wrap" Margin="0,0,0,8" FontSize="14"/>
                 <ItemsControl ItemsSource="{Binding ReadyMessages}" Margin="0,0,0,16">
                   <ItemsControl.ItemTemplate>
@@ -477,16 +536,20 @@
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
+                <CheckBox Content="Initialize Git repository and initial commit when exporting Agent Package"
+                          IsChecked="{Binding InitializeGitOnExport}" Margin="0,0,0,10" FontWeight="SemiBold"/>
                 <WrapPanel>
-                  <Button Content="Check again" Command="{Binding RunReadyCheckCommand}" Style="{StaticResource GhostButton}" Margin="0,0,10,8"/>
+                  <Button Content="Check again" Command="{Binding RunReadyCheckCommand}" Style="{DynamicResource GhostButton}" Margin="0,0,10,8"/>
                   <Button Content="Edit selected section" Command="{Binding JumpToHubSectionCommand}"
                           CommandParameter="{Binding SelectedHubSection}"
-                          Style="{StaticResource GhostButton}" Margin="0,0,10,8"/>
-                  <Button Content="Save App Blueprint" Command="{Binding SaveDocumentCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,10,8"
+                          Style="{DynamicResource GhostButton}" Margin="0,0,10,8"/>
+                  <Button Content="Copy Kickoff Prompt" Command="{Binding CopyKickoffPromptCommand}" Style="{DynamicResource GhostButton}" Margin="0,0,10,8"
+                          ToolTip="Copy ready-to-run prompt for Claude / Cursor / Gemini"/>
+                  <Button Content="Save App Blueprint" Command="{Binding SaveDocumentCommand}" Style="{DynamicResource SecondaryButton}" Margin="0,0,10,8"
                           IsEnabled="{Binding IsReadyToExport}"/>
-                  <Button Content="Export for AI agent" Command="{Binding ExportJsonCommand}" Style="{StaticResource PrimaryButton}" Margin="0,0,10,8"
+                  <Button Content="Export for AI agent" Command="{Binding ExportJsonCommand}" Style="{DynamicResource PrimaryButton}" Margin="0,0,10,8"
                           IsEnabled="{Binding IsReadyToExport}"/>
-                  <Button Content="Export Agent Package" Command="{Binding ExportAgentPackageCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,0,8"
+                  <Button Content="Export Agent Package" Command="{Binding ExportAgentPackageCommand}" Style="{DynamicResource SecondaryButton}" Margin="0,0,0,8"
                           IsEnabled="{Binding IsReadyToExport}"/>
                 </WrapPanel>
               </StackPanel>
@@ -496,4 +559,5 @@
       </DockPanel>
     </Border>
   </DockPanel>
+  </Border>
 </Window>

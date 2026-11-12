@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CoreAiArchitect.Core.Json;
+using CoreAiArchitect.Core.Migration;
 using CoreAiArchitect.Core.Models.Ssot;
 
 namespace CoreAiArchitect.Core.Export;
@@ -23,11 +24,15 @@ public sealed class JsonExporter
     public SsotDocument LoadFromFile(string path)
     {
         var json = File.ReadAllText(path);
-        return JsonSerializer.Deserialize<SsotDocument>(json, _options)
+        var migrated = SsotDocumentMigrator.MigrateJson(json);
+        return JsonSerializer.Deserialize<SsotDocument>(migrated, _options)
                ?? throw new InvalidOperationException("SSOT JSON deserialized to null.");
     }
 
-    public SsotDocument LoadFromJson(string json) =>
-        JsonSerializer.Deserialize<SsotDocument>(json, _options)
-        ?? throw new InvalidOperationException("SSOT JSON deserialized to null.");
+    public SsotDocument LoadFromJson(string json)
+    {
+        var migrated = SsotDocumentMigrator.MigrateJson(json);
+        return JsonSerializer.Deserialize<SsotDocument>(migrated, _options)
+               ?? throw new InvalidOperationException("SSOT JSON deserialized to null.");
+    }
 }

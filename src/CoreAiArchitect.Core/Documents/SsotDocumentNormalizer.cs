@@ -29,6 +29,8 @@ public static class SsotDocumentNormalizer
         foreach (var screen in document.Ui.Screens)
         {
             screen.Controls ??= new List<ControlInfo>();
+            if (string.IsNullOrWhiteSpace(screen.ScreenType))
+                screen.ScreenType = screen.Id.Equals("main", StringComparison.OrdinalIgnoreCase) ? "Window" : "Dialog";
         }
 
         document.Domain ??= new DomainInfo();
@@ -66,8 +68,32 @@ public static class SsotDocumentNormalizer
         document.Documentation ??= new DocumentationInfo();
         document.Documentation.Sections ??= new List<string>();
 
+        if (string.IsNullOrWhiteSpace(document.ProfileId))
+        {
+            if (document.Environment.TargetOs.Equals("Android", StringComparison.OrdinalIgnoreCase)
+                || document.Environment.UiFramework.Equals("Jetpack Compose", StringComparison.OrdinalIgnoreCase)
+                || document.Project.Tags.Any(t => t.Equals("android-app", StringComparison.OrdinalIgnoreCase)))
+            {
+                document.ProfileId = "android_app";
+            }
+            else if (document.Environment.UiFramework.Equals("ASP.NET", StringComparison.OrdinalIgnoreCase)
+                     || document.Project.Tags.Any(t => t.Equals("web-api", StringComparison.OrdinalIgnoreCase)))
+            {
+                document.ProfileId = "web_api";
+            }
+            else if (document.Environment.Language.Equals("PowerShell", StringComparison.OrdinalIgnoreCase)
+                     || document.Project.Tags.Any(t => t.Equals("powershell-module", StringComparison.OrdinalIgnoreCase)))
+            {
+                document.ProfileId = "powershell_module";
+            }
+            else
+            {
+                document.ProfileId = "wpf_desktop";
+            }
+        }
+
         if (string.IsNullOrWhiteSpace(document.SsotVersion))
-            document.SsotVersion = "1.0.0";
+            document.SsotVersion = SsotDocument.CurrentSchemaVersion;
 
         return document;
     }

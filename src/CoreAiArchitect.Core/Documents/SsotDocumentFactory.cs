@@ -10,6 +10,7 @@ public static class SsotDocumentFactory
         var doc = new SsotDocument
         {
             SsotVersion = profile.TargetSsotVersion,
+            ProfileId = profile.Id,
             Environment =
             {
                 TargetOs = profile.EnvironmentDefaults.TargetOs,

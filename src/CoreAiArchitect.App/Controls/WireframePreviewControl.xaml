@@ -1,0 +1,42 @@
+<UserControl x:Class="CoreAiArchitect.App.Controls.WireframePreviewControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignHeight="400" d:DesignWidth="300">
+  <Border x:Name="OuterFrame" CornerRadius="12" BorderThickness="1.5" BorderBrush="#C5BFB5"
+          Background="#FAFAF9" ClipToBounds="True">
+    <DockPanel>
+      <!-- Title bar / Shell header -->
+      <Border x:Name="TitleBar" DockPanel.Dock="Top" Background="#E8E2D8" Padding="12,8">
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+          <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+            <TextBlock x:Name="WindowGlyph" Text="🗖" FontSize="11" Margin="0,0,6,0" Foreground="#555" VerticalAlignment="Center"/>
+            <TextBlock x:Name="ScreenTitleText" Text="Screen Title" FontWeight="SemiBold" FontSize="12" Foreground="#333" TextTrimming="CharacterEllipsis"/>
+            <Border x:Name="ScreenTypeBadge" Margin="8,0,0,0" Padding="4,1" CornerRadius="4" Background="#D5CBBF">
+              <TextBlock x:Name="ScreenTypeText" Text="Window" FontSize="10" Foreground="#222"/>
+            </Border>
+          </StackPanel>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" x:Name="WindowButtons">
+            <TextBlock Text="—" FontSize="10" Margin="4,0" Foreground="#777"/>
+            <TextBlock Text="□" FontSize="10" Margin="4,0" Foreground="#777"/>
+            <TextBlock Text="✕" FontSize="10" Margin="4,0" Foreground="#777"/>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <!-- Screen Canvas / Controls preview -->
+      <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="14">
+        <StackPanel x:Name="ControlsContainer">
+          <TextBlock x:Name="EmptyHint" Text="Empty screen. Add things on the left."
+                     Foreground="#888" FontStyle="Italic" FontSize="12" HorizontalAlignment="Center" Margin="0,40,0,0"/>
+        </StackPanel>
+      </ScrollViewer>
+    </DockPanel>
+  </Border>
+</UserControl>
+
