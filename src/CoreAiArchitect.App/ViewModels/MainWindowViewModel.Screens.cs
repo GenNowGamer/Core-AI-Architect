@@ -63,6 +63,48 @@ public partial class MainWindowViewModel
     [RelayCommand]
     private void MoveControlDown() => MoveSelectedControl(1);
 
+    [RelayCommand]
+    private void ToggleAdvancedControlId() => ShowAdvancedControlId = !ShowAdvancedControlId;
+
+    [RelayCommand]
+    private void SelectScreen(ScreenInfo? screen)
+    {
+        if (screen is not null)
+            SelectedScreen = screen;
+    }
+
+    [RelayCommand]
+    private void RemoveSpecificScreen(ScreenInfo? screen)
+    {
+        if (screen is null) return;
+        SelectedScreen = screen;
+        RemoveScreen();
+    }
+
+    [RelayCommand]
+    private void MoveSpecificControlUp(ControlInfo? control)
+    {
+        if (control is null) return;
+        SelectedControl = control;
+        MoveSelectedControl(-1);
+    }
+
+    [RelayCommand]
+    private void MoveSpecificControlDown(ControlInfo? control)
+    {
+        if (control is null) return;
+        SelectedControl = control;
+        MoveSelectedControl(1);
+    }
+
+    [RelayCommand]
+    private void RemoveSpecificControl(ControlInfo? control)
+    {
+        if (control is null) return;
+        SelectedControl = control;
+        RemoveThing();
+    }
+
     private void MoveSelectedControl(int delta)
     {
         if (SelectedScreen is null || SelectedControl is null) return;

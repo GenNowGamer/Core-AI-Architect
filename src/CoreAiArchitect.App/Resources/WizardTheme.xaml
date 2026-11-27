@@ -407,4 +407,39 @@
       </Setter.Value>
     </Setter>
   </Style>
+
+  <!-- Required / Optional Pill Badges -->
+  <Style x:Key="RequiredBadge" TargetType="Border">
+    <Setter Property="Background" Value="#26FA7E6B"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CoralBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="4"/>
+    <Setter Property="Padding" Value="6,1"/>
+    <Setter Property="Margin" Value="8,0,0,0"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+  </Style>
+
+  <Style x:Key="RequiredBadgeText" TargetType="TextBlock">
+    <Setter Property="Text" Value="Required"/>
+    <Setter Property="FontSize" Value="10"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
+    <Setter Property="Foreground" Value="{DynamicResource CoralBrush}"/>
+  </Style>
+
+  <Style x:Key="OptionalBadge" TargetType="Border">
+    <Setter Property="Background" Value="{DynamicResource SandDeepBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="4"/>
+    <Setter Property="Padding" Value="6,1"/>
+    <Setter Property="Margin" Value="8,0,0,0"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+  </Style>
+
+  <Style x:Key="OptionalBadgeText" TargetType="TextBlock">
+    <Setter Property="Text" Value="Optional"/>
+    <Setter Property="FontSize" Value="10"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+  </Style>
 </ResourceDictionary>

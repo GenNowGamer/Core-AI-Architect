@@ -18,15 +18,19 @@ namespace CoreAiArchitect.App.ViewModels;
 
 public partial class WizardStepItem : ObservableObject
 {
-    public WizardStepItem(WizardStep step, int number, string label)
+    public WizardStepItem(WizardStep step, int number, string label, bool isRequired, string requirementTag)
     {
         Step = step;
         Number = number;
         Label = label;
+        IsRequired = isRequired;
+        RequirementTag = requirementTag;
     }
 
     public WizardStep Step { get; }
     public int Number { get; }
+    public bool IsRequired { get; }
+    public string RequirementTag { get; }
     [ObservableProperty] private string _label;
     [ObservableProperty] private bool _isCurrent;
     [ObservableProperty] private bool _isCompleted;
@@ -269,12 +273,12 @@ public partial class MainWindowViewModel : ObservableObject
 
     public ObservableCollection<WizardStepItem> StepItems { get; } = new()
     {
-        new(WizardStep.YourIdea, 1, "1. Idea"),
-        new(WizardStep.WhatYouNeed, 2, "2. Needs"),
-        new(WizardStep.Screens, 3, "3. Screens"),
-        new(WizardStep.WhenTheyClick, 4, "4. Clicks"),
-        new(WizardStep.RememberStuff, 5, "5. Remember"),
-        new(WizardStep.HandOff, 6, "6. Blueprint")
+        new(WizardStep.YourIdea, 1, "1. Idea", true, "Required"),
+        new(WizardStep.WhatYouNeed, 2, "2. Needs", false, "Optional"),
+        new(WizardStep.Screens, 3, "3. Screens", true, "Required"),
+        new(WizardStep.WhenTheyClick, 4, "4. Clicks", false, "Optional"),
+        new(WizardStep.RememberStuff, 5, "5. Remember", false, "Optional"),
+        new(WizardStep.HandOff, 6, "6. Blueprint", false, "Export")
     };
 
     [ObservableProperty] private WizardStep _currentStep;
@@ -318,6 +322,7 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private bool _initializeGitOnExport = true;
     [ObservableProperty] private int _selectedArtifactTabIndex;
     [ObservableProperty] private int _wireframeRefreshVersion;
+    [ObservableProperty] private bool _showAdvancedControlId;
     [ObservableProperty] private string _blueprintJsonPreview = string.Empty;
     [ObservableProperty] private string _agentsMdPreview = string.Empty;
     [ObservableProperty] private string _specificationsPreview = string.Empty;

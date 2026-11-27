@@ -1,8 +1,8 @@
 # Core AI Architect
 
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%7C%20Windows%2011%20(x64)-0078D6.svg?logo=windows&logoColor=white)](#build-and-run)
-[![Version](https://img.shields.io/badge/Version-1.1.1-green.svg)](https://github.com/GenNowGamer/Core-AI-Architect/releases/latest)
-[![Release](https://img.shields.io/badge/Release-v1.1.1-orange.svg)](https://github.com/GenNowGamer/Core-AI-Architect/releases/latest)
+[![Version](https://img.shields.io/badge/Version-1.1.2-green.svg)](https://github.com/GenNowGamer/Core-AI-Architect/releases/latest)
+[![Release](https://img.shields.io/badge/Release-v1.1.2-orange.svg)](https://github.com/GenNowGamer/Core-AI-Architect/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/GenNowGamer/Core-AI-Architect/total?color=2ea44f&logo=github&label=Downloads)](https://github.com/GenNowGamer/Core-AI-Architect/releases)
 [![Framework](https://img.shields.io/badge/Framework-.NET%208%20WPF%20%7C%20PowerShell%207%2B-512BD4.svg?logo=dotnet&logoColor=white)](#solution-layout)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](#stack)
@@ -21,9 +21,9 @@ Windows 11 desktop tool that authors a canonical JSON **App Blueprint** (SSOT �
 
 ## What it does
 
-1. Fill a **guided Ad-Lib** (who it’s for, what it helps them do, main capabilities) plus optional product rules / starter templates (Blank, Master-Detail / Catalog, Dashboard & Analytics, File / Batch Processor, Simple form, List + save history)
+1. Fill a **guided Ad-Lib** (who it’s for, what it helps them do, main capabilities) plus optional product rules / starter templates (Blank, Master-Detail / Catalog, Dashboard & Analytics, File / Batch Processor, Simple form, List + save history), with clear **Required** / **Optional** badges on every step and field
 2. Answer plain-language **Needs** (accounts, multi-device, notifications)
-3. Jump between any step via the **clickable 6-step stepper bar** and build **screens** (or **endpoint groups** for `web_api`) with a **live, interactive dark-themed wireframe canvas** and ▲ / ▼ control reordering
+3. Jump between any step via the **clickable 6-step stepper bar** and build **screens** (or **endpoint groups** for `web_api`) using horizontal screen tabs, a 4-card visual element palette, compact element cards with inline reordering, a collapsible Advanced ID toggle, and a **45% live, interactive dark-themed wireframe canvas**
 4. Write plain-English steps for **when someone clicks** each button (or request/response flow for API endpoints)
 5. Optionally turn on History / Settings (**Remember**)
 6. Review the **Project Blueprint** hub with deterministic recommendations, in-app artifact inspection tabs (`App Story`, `Blueprint JSON`, `AGENTS.md`, `Specifications`, `Tasks`), Undo/Redo support, **Recent Blueprints** history, **Help → About** version info, automated git workspace initialization, and one-click **"Copy Kickoff Prompt"**
