@@ -207,11 +207,23 @@ public class NewFeaturesAndIntegrationTests
             var exporter = new AgentPackageExporter();
             var files = exporter.Export(doc, root);
 
+            Assert.True(File.Exists(Path.Combine(root, "project.json")));
+            Assert.Empty(Directory.EnumerateFiles(root, "*.ssot.json"));
+
             var cursorRules = Path.Combine(root, ".cursorrules");
             Assert.True(File.Exists(cursorRules));
             var cursorText = File.ReadAllText(cursorRules);
             Assert.Contains("MVVM", cursorText);
             Assert.Contains("SQLite", cursorText);
+
+            var cursorMdc = Path.Combine(root, ".cursor", "rules", "project.mdc");
+            Assert.True(File.Exists(cursorMdc));
+            var cursorMdcText = File.ReadAllText(cursorMdc);
+            Assert.Contains("alwaysApply: true", cursorMdcText);
+
+            var copilotMd = Path.Combine(root, ".github", "copilot-instructions.md");
+            Assert.True(File.Exists(copilotMd));
+            Assert.Contains("project.json", File.ReadAllText(copilotMd));
 
             var claudeMd = Path.Combine(root, "CLAUDE.md");
             Assert.True(File.Exists(claudeMd));
@@ -252,5 +264,43 @@ public class NewFeaturesAndIntegrationTests
         Assert.Equal("c2", screen.Controls[0].Id);
         Assert.Equal("c1", screen.Controls[1].Id);
         Assert.Equal("c3", screen.Controls[2].Id);
+    }
+
+    [Fact]
+    public void WebApiProfile_CompilesAndPassesReadiness()
+    {
+        var catalog = new SchemaCatalog();
+        catalog.LoadFromDirectory(SchemasDir);
+        var profile = catalog.RequireById("web_api");
+        var answers = new WizardAnswers
+        {
+            ProfileId = "web_api",
+            ProjectName = "Orders API",
+            Description = "REST API for managing customer orders and inventory."
+        };
+        new CompatibilityEngine().ApplySafeDefaults(answers, profile);
+        var compiler = new BlueprintCompiler();
+        var doc = compiler.BuildNew(answers, profile, seedMainScreen: true);
+        doc = compiler.Compile(doc, answers, profile);
+
+        Assert.Equal("web_api", doc.ProfileId);
+        Assert.NotEmpty(doc.Ui.Screens);
+        var ready = new SsotReadinessEngine().Assess(doc, profile);
+        Assert.True(ready.IsValid, string.Join("; ", ready.Errors.Select(e => e.Message)));
+    }
+
+    [Fact]
+    public void UserSettings_AddRecentFile_DeduplicatesAndCapsAtMax()
+    {
+        var settings = new CoreAiArchitect.Core.Models.UserSettings();
+        for (var i = 1; i <= 10; i++)
+            settings.AddRecentFile($@"C:\temp\app-{i}.ssot.json");
+
+        Assert.Equal(CoreAiArchitect.Core.Models.UserSettings.MaxRecentFiles, settings.RecentFiles.Count);
+        Assert.Equal(@"C:\temp\app-10.ssot.json", settings.RecentFiles[0]);
+
+        settings.AddRecentFile(@"c:\temp\APP-5.ssot.json");
+        Assert.Equal(CoreAiArchitect.Core.Models.UserSettings.MaxRecentFiles, settings.RecentFiles.Count);
+        Assert.Equal(@"c:\temp\APP-5.ssot.json", settings.RecentFiles[0]);
     }
 }

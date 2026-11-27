@@ -6,6 +6,8 @@
         Title="{Binding WindowTitle}"
         Height="840" Width="1220"
         MinHeight="660" MinWidth="1020"
+        Background="{DynamicResource SandBrush}"
+        Foreground="{DynamicResource InkBrush}"
         WindowStartupLocation="CenterScreen">
   <Window.Resources>
     <conv:WizardStepVisibilityConverter x:Key="StepVis"/>
@@ -19,12 +21,21 @@
     <KeyBinding Key="Y" Modifiers="Control" Command="{Binding RedoCommand}"/>
   </Window.InputBindings>
 
-  <Border BorderThickness="1" BorderBrush="{DynamicResource OuterBorderBrush}">
-  <DockPanel>
+  <Border BorderThickness="1" BorderBrush="{DynamicResource OuterBorderBrush}" Background="{DynamicResource SandBrush}">
+  <DockPanel Background="{DynamicResource SandBrush}">
     <Menu DockPanel.Dock="Top">
       <MenuItem Header="_File">
         <MenuItem Header="_New app blueprint" Command="{Binding NewDocumentCommand}"/>
         <MenuItem Header="_Open..." Command="{Binding OpenDocumentCommand}"/>
+        <MenuItem Header="_Recent Blueprints" ItemsSource="{Binding RecentFiles}">
+          <MenuItem.ItemContainerStyle>
+            <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+              <Setter Property="Header" Value="{Binding}"/>
+              <Setter Property="Command" Value="{Binding DataContext.OpenRecentFileCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+              <Setter Property="CommandParameter" Value="{Binding}"/>
+            </Style>
+          </MenuItem.ItemContainerStyle>
+        </MenuItem>
         <MenuItem Header="_Save" Command="{Binding SaveDocumentCommand}"/>
         <MenuItem Header="Save _As..." Command="{Binding SaveDocumentAsCommand}"/>
         <Separator/>
@@ -40,6 +51,8 @@
       </MenuItem>
       <MenuItem Header="_Help">
         <MenuItem Header="_How this works" Command="{Binding ShowHelpCommand}"/>
+        <Separator/>
+        <MenuItem Header="_About Core AI Architect" Command="{Binding ShowAboutCommand}"/>
       </MenuItem>
     </Menu>
 
@@ -50,8 +63,15 @@
           <ColumnDefinition Width="320"/>
         </Grid.ColumnDefinitions>
         <StackPanel>
-          <TextBlock Text="Core AI Architect" FontFamily="{StaticResource DisplayFont}"
-                     FontSize="28" FontWeight="SemiBold" Foreground="White"/>
+          <StackPanel Orientation="Horizontal">
+            <TextBlock Text="Core AI Architect" FontFamily="{StaticResource DisplayFont}"
+                       FontSize="28" FontWeight="SemiBold" Foreground="White"/>
+            <Border Margin="10,0,0,0" Padding="8,2" CornerRadius="10"
+                    Background="#26FFFFFF" BorderBrush="#4DFFFFFF" BorderThickness="1"
+                    VerticalAlignment="Center">
+              <TextBlock Text="{Binding AppVersionDisplay}" FontSize="11" FontWeight="SemiBold" Foreground="#EAF6F5"/>
+            </Border>
+          </StackPanel>
           <TextBlock Text="Describe what you want — we turn it into a validated App Blueprint for an AI coding agent."
                      Foreground="#F7EDE8" Margin="0,4,0,0" TextWrapping="Wrap"/>
         </StackPanel>
@@ -73,11 +93,68 @@
       <StatusBarItem>
         <TextBlock Text="{Binding StatusText}" Margin="8,0"/>
       </StatusBarItem>
+      <StatusBarItem HorizontalAlignment="Right">
+        <TextBlock Text="{Binding AppVersionDisplay, StringFormat=Core AI Architect {0}}"
+                   Foreground="{DynamicResource TextSecondaryBrush}" Margin="8,0"/>
+      </StatusBarItem>
     </StatusBar>
 
     <Border Margin="24" Style="{DynamicResource WizardCard}" Padding="28">
       <DockPanel>
-        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,20">
+        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,16">
+          <ItemsControl ItemsSource="{Binding StepItems}" Margin="0,0,0,14">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <UniformGrid Rows="1"/>
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Button Command="{Binding DataContext.NavigateToStepCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                        CommandParameter="{Binding Step}"
+                        Cursor="Hand" Margin="0,0,6,0" Padding="8,6">
+                  <Button.Style>
+                    <Style TargetType="Button">
+                      <Setter Property="Background" Value="{DynamicResource InnerCardBackgroundBrush}"/>
+                      <Setter Property="BorderBrush" Value="{DynamicResource InnerCardBorderBrush}"/>
+                      <Setter Property="BorderThickness" Value="1"/>
+                      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+                      <Setter Property="Template">
+                        <Setter.Value>
+                          <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="6" Padding="{TemplateBinding Padding}">
+                              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                              <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource TealBrush}"/>
+                              </Trigger>
+                            </ControlTemplate.Triggers>
+                          </ControlTemplate>
+                        </Setter.Value>
+                      </Setter>
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsCompleted}" Value="True">
+                          <Setter Property="Foreground" Value="{DynamicResource TealBrush}"/>
+                          <Setter Property="BorderBrush" Value="{DynamicResource TealBrush}"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                          <Setter Property="Background" Value="{DynamicResource CoralBrush}"/>
+                          <Setter Property="BorderBrush" Value="{DynamicResource CoralBrush}"/>
+                          <Setter Property="Foreground" Value="White"/>
+                          <Setter Property="FontWeight" Value="SemiBold"/>
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </Button.Style>
+                  <TextBlock Text="{Binding Label}" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" FontSize="12"/>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
           <TextBlock Text="{Binding StepTitle}" FontFamily="{StaticResource DisplayFont}"
                      FontSize="26" FontWeight="SemiBold" Foreground="{DynamicResource TealBrush}"/>
           <TextBlock Text="{Binding StepSubtitle}" Margin="0,6,0,0" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}"/>
@@ -263,9 +340,9 @@
               </Grid.RowDefinitions>
 
               <StackPanel Grid.Column="0" Margin="0,0,16,0">
-                <TextBlock Text="Screens" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                <TextBlock Text="{Binding ScreensGroupHeading}" FontWeight="SemiBold" Margin="0,0,0,8"/>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                  <Button Content="Add Screen" Command="{Binding AddScreenCommand}" Style="{DynamicResource SecondaryButton}"
+                  <Button Content="{Binding AddScreenButtonLabel}" Command="{Binding AddScreenCommand}" Style="{DynamicResource SecondaryButton}"
                           Padding="10,6" Margin="0,0,8,0"/>
                   <Button Content="Remove" Command="{Binding RemoveScreenCommand}" Style="{DynamicResource GhostButton}" Padding="10,6"/>
                 </StackPanel>
@@ -284,21 +361,21 @@
                     <ColumnDefinition Width="130"/>
                   </Grid.ColumnDefinitions>
                   <StackPanel Grid.Column="0">
-                    <TextBlock Style="{DynamicResource FieldLabel}" Text="Screen title"/>
-                    <TextBox Text="{Binding SelectedScreen.Title, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock Style="{DynamicResource FieldLabel}" Text="{Binding ScreenTitleLabel}"/>
+                    <TextBox Text="{Binding SelectedScreen.Title, UpdateSourceTrigger=PropertyChanged}" TextChanged="WireframeField_OnTextChanged"/>
                   </StackPanel>
                   <StackPanel Grid.Column="2">
-                    <TextBlock Style="{DynamicResource FieldLabel}" Text="Screen type"/>
-                    <ComboBox ItemsSource="{Binding ScreenTypeOptions}" SelectedItem="{Binding SelectedScreen.ScreenType}"/>
+                    <TextBlock Style="{DynamicResource FieldLabel}" Text="{Binding ScreenTypeLabel}"/>
+                    <ComboBox ItemsSource="{Binding ScreenTypeOptions}" SelectedItem="{Binding SelectedScreen.ScreenType}" SelectionChanged="WireframeField_OnSelectionChanged"/>
                   </StackPanel>
                 </Grid>
-                <TextBlock Text="Add a thing" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                <TextBlock Text="{Binding AddThingSectionLabel}" FontWeight="SemiBold" Margin="0,0,0,6"/>
                 <WrapPanel Margin="0,0,0,6">
                   <Button Content="Choice list" Command="{Binding AddChoiceListCommand}" Style="{DynamicResource SecondaryButton}"
                           Padding="10,6" Margin="0,0,8,6" ToolTip="Let people pick one option"/>
                   <Button Content="Place to type" Command="{Binding AddPlaceToTypeCommand}" Style="{DynamicResource SecondaryButton}"
                           Padding="10,6" Margin="0,0,8,6" ToolTip="A box for numbers or text"/>
-                  <Button Content="Button" Command="{Binding AddButtonThingCommand}" Style="{DynamicResource SecondaryButton}"
+                  <Button Content="{Binding ButtonThingLabel}" Command="{Binding AddButtonThingCommand}" Style="{DynamicResource SecondaryButton}"
                           Padding="10,6" Margin="0,0,8,6" ToolTip="Something people click to do work"/>
                   <Button Content="Results list" Command="{Binding AddResultsListCommand}" Style="{DynamicResource SecondaryButton}"
                           Padding="10,6" Margin="0,0,8,6" ToolTip="Show generated or saved items"/>
@@ -338,17 +415,20 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0">
                   <TextBlock Style="{DynamicResource FieldLabel}" Text="Name people will see"/>
-                  <TextBox Text="{Binding SelectedControl.Label, UpdateSourceTrigger=PropertyChanged}"/>
+                  <TextBox Text="{Binding SelectedControl.Label, UpdateSourceTrigger=PropertyChanged}" TextChanged="WireframeField_OnTextChanged"/>
                 </StackPanel>
                 <StackPanel Grid.Column="2">
                   <TextBlock Style="{DynamicResource FieldLabel}" Text="Internal id (advanced)"/>
-                  <TextBox Text="{Binding SelectedControl.Id, UpdateSourceTrigger=PropertyChanged}"/>
+                  <TextBox Text="{Binding SelectedControl.Id, UpdateSourceTrigger=PropertyChanged}" TextChanged="WireframeField_OnTextChanged"/>
                 </StackPanel>
               </Grid>
 
               <!-- Live Wireframe Preview -->
               <Border Grid.Column="2" Grid.Row="0" Grid.RowSpan="3" Margin="14,0,0,0">
-                <ctrl:WireframePreviewControl Screen="{Binding SelectedScreen}" ProfileId="{Binding Answers.ProfileId}"/>
+                <ctrl:WireframePreviewControl Screen="{Binding SelectedScreen}"
+                                              ProfileId="{Binding Answers.ProfileId}"
+                                              SelectedControl="{Binding SelectedControl, Mode=TwoWay}"
+                                              RefreshVersion="{Binding WireframeRefreshVersion}"/>
               </Border>
             </Grid>
 
@@ -359,11 +439,11 @@
                 <ColumnDefinition Width="*"/>
               </Grid.ColumnDefinitions>
               <DockPanel>
-                <TextBlock DockPanel.Dock="Top" Text="Buttons" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                <TextBlock DockPanel.Dock="Top" Text="{Binding ClicksListHeading}" FontWeight="SemiBold" Margin="0,0,0,8"/>
                 <ListBox ItemsSource="{Binding ClickFlows}" SelectedItem="{Binding SelectedClickFlow}" DisplayMemberPath="ButtonLabel"/>
               </DockPanel>
               <StackPanel Grid.Column="1" Margin="16,0,0,0">
-                <TextBlock Style="{DynamicResource FieldLabel}" Text="What happens when someone uses this button?"/>
+                <TextBlock Style="{DynamicResource FieldLabel}" Text="{Binding ClicksFlowQuestion}"/>
                 <TextBlock Text="{Binding ClicksGuidance}" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,8"/>
                 <TextBox Text="{Binding SelectedClickFlow.StepsText, UpdateSourceTrigger=PropertyChanged}"
                          AcceptsReturn="True" TextWrapping="Wrap" MinHeight="160"

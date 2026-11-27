@@ -11,9 +11,10 @@
 
     <Icon Id="AppIcon" SourceFile="$(var.IconFile)" />
     <Property Id="ARPPRODUCTICON" Value="AppIcon" />
-    <Property Id="ARPHELPLINK" Value="https://github.com/CoresynthStudios/Core_AI_Architect" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/GenNowGamer/Core-AI-Architect" />
 
     <MajorUpgrade
+      AllowSameVersionUpgrades="yes"
       DowngradeErrorMessage="A newer version of Core AI Architect is already installed." />
 
     <MediaTemplate EmbedCab="yes" />

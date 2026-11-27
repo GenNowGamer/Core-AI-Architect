@@ -45,6 +45,35 @@ function getCurrentVersion() {
   return '1.1.0';
 }
 
+function computeNextPatchVersion(currentVersion) {
+  const parts = currentVersion.split('.');
+  while (parts.length < 3) parts.push('0');
+  const patch = parseInt(parts[2], 10);
+  parts[2] = String(Number.isNaN(patch) ? 1 : patch + 1);
+  return parts.slice(0, 3).join('.');
+}
+
+function applyVersionBump(currentVersion, nextVersion) {
+  const propsPath = path.join(repoRoot, 'Directory.Build.props');
+  if (fs.existsSync(propsPath)) {
+    let props = fs.readFileSync(propsPath, 'utf8');
+    props = props.replace(/(<Version>)[^<]+(<\/Version>)/i, `$1${nextVersion}$2`);
+    props = props.replace(/(<FileVersion>)[^<]+(<\/FileVersion>)/i, `$1${nextVersion}.0$2`);
+    props = props.replace(/(<AssemblyVersion>)[^<]+(<\/AssemblyVersion>)/i, `$1${nextVersion}.0$2`);
+    fs.writeFileSync(propsPath, props, 'utf8');
+  }
+
+  const readmePath = path.join(repoRoot, 'README.md');
+  if (fs.existsSync(readmePath)) {
+    let readme = fs.readFileSync(readmePath, 'utf8');
+    readme = readme.replaceAll(`Version-${currentVersion}`, `Version-${nextVersion}`);
+    readme = readme.replaceAll(`Release-v${currentVersion}`, `Release-v${nextVersion}`);
+    fs.writeFileSync(readmePath, readme, 'utf8');
+  }
+
+  console.log(`Bumped version: ${currentVersion} -> ${nextVersion} (Directory.Build.props & README.md)`);
+}
+
 function requestGithub(pathname, method = 'GET', data = null, headers = {}) {
   const token = getGitHubToken();
   if (!token) throw new Error('No GitHub credential or GITHUB_TOKEN found.');
@@ -167,7 +196,13 @@ async function purgePriorReleasesAndTags(repoOwner, repoName, currentTagName) {
 
 async function main() {
   const { owner, repo } = getRepoCoordinates();
-  const version = getCurrentVersion();
+  const shouldBump = process.argv.includes('--bump');
+  let version = getCurrentVersion();
+  if (shouldBump) {
+    const nextVersion = computeNextPatchVersion(version);
+    applyVersionBump(version, nextVersion);
+    version = nextVersion;
+  }
   const tagName = `v${version}`;
   const releaseTitle = `Core AI Architect v${version}`;
 
@@ -178,8 +213,8 @@ async function main() {
 
   // 1. Ensure fresh application and setup MSI are built
   const msiPath = path.join(artifactsDir, 'CoreAiArchitect-Setup.msi');
-  if (!fs.existsSync(msiPath)) {
-    console.log('Setup MSI not found in artifacts. Compiling now...');
+  if (shouldBump || !fs.existsSync(msiPath)) {
+    console.log(shouldBump ? 'Version bumped — rebuilding app and Setup MSI...' : 'Setup MSI not found in artifacts. Compiling now...');
     execSync('powershell -ExecutionPolicy Bypass -File tools/Build-Installer.ps1', {
       cwd: repoRoot,
       stdio: 'inherit',

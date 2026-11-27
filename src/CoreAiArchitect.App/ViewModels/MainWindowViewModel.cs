@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Windows;
@@ -14,6 +15,22 @@ using CoreAiArchitect.Core.Validation;
 using CoreAiArchitect.Core.Wizard;
 
 namespace CoreAiArchitect.App.ViewModels;
+
+public partial class WizardStepItem : ObservableObject
+{
+    public WizardStepItem(WizardStep step, int number, string label)
+    {
+        Step = step;
+        Number = number;
+        Label = label;
+    }
+
+    public WizardStep Step { get; }
+    public int Number { get; }
+    [ObservableProperty] private string _label;
+    [ObservableProperty] private bool _isCurrent;
+    [ObservableProperty] private bool _isCompleted;
+}
 
 public partial class AppKindOption : ObservableObject
 {
@@ -80,6 +97,8 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly SsotReadinessEngine _readiness = new();
     private readonly RecommendationEngine _recommendations = new();
     private readonly UndoManager _undoManager = new();
+    private readonly UserSettingsService _settingsService = new();
+    private readonly Core.Models.UserSettings _settings;
     private bool _suppressKindChange;
     private bool _documentInitialized;
 
@@ -92,6 +111,9 @@ public partial class MainWindowViewModel : ObservableObject
         _dialogs = dialogs;
         _documents = documents;
         _schemaCatalog.EnsureLoaded();
+        _settings = _settingsService.Load();
+        foreach (var path in _settings.RecentFiles)
+            RecentFiles.Add(path);
 
         AppKinds = new ObservableCollection<AppKindOption>
         {
@@ -165,6 +187,7 @@ public partial class MainWindowViewModel : ObservableObject
     public ObservableCollection<string> DecisionModeOptions { get; }
     public ObservableCollection<string> ThemeOptions { get; } = new();
     public ObservableCollection<string> NavigationOptions { get; } = new();
+    public ObservableCollection<string> RecentFiles { get; } = new();
     public ObservableCollection<string> ScreenTypeOptions { get; } = new()
     {
         "Window",
@@ -178,6 +201,54 @@ public partial class MainWindowViewModel : ObservableObject
 
     public WizardAnswers Answers { get; }
 
+    public string AppVersion { get; } = ResolveAppVersion();
+    public string AppVersionDisplay => $"v{AppVersion}";
+
+    private static string ResolveAppVersion()
+    {
+        var asm = typeof(MainWindowViewModel).Assembly;
+        var info = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        if (!string.IsNullOrWhiteSpace(info))
+        {
+            var plus = info.IndexOf('+');
+            return plus > 0 ? info[..plus] : info;
+        }
+        var ver = asm.GetName().Version;
+        return ver is not null ? $"{ver.Major}.{ver.Minor}.{ver.Build}" : "1.1.0";
+    }
+
+    public bool IsWebApiProfile => string.Equals(Answers.ProfileId, "web_api", StringComparison.OrdinalIgnoreCase);
+
+    public string ScreensGroupHeading => IsWebApiProfile ? "Endpoint Groups" : "Screens";
+    public string AddScreenButtonLabel => IsWebApiProfile ? "Add Group" : "Add Screen";
+    public string ScreenTitleLabel => IsWebApiProfile ? "Resource / Route Group" : "Screen title";
+    public string ScreenTypeLabel => IsWebApiProfile ? "Group type" : "Screen type";
+    public string AddThingSectionLabel => IsWebApiProfile ? "Add endpoint or parameter" : "Add a thing";
+    public string ButtonThingLabel => IsWebApiProfile ? "Endpoint" : "Button";
+    public string ClicksListHeading => IsWebApiProfile ? "Endpoints" : "Buttons";
+    public string ClicksFlowQuestion => IsWebApiProfile
+        ? "Request handling & response steps for this endpoint:"
+        : "What happens when someone uses this button?";
+
+    private void NotifyProfileLabelsChanged()
+    {
+        OnPropertyChanged(nameof(IsWebApiProfile));
+        OnPropertyChanged(nameof(ScreensGroupHeading));
+        OnPropertyChanged(nameof(AddScreenButtonLabel));
+        OnPropertyChanged(nameof(ScreenTitleLabel));
+        OnPropertyChanged(nameof(ScreenTypeLabel));
+        OnPropertyChanged(nameof(AddThingSectionLabel));
+        OnPropertyChanged(nameof(ButtonThingLabel));
+        OnPropertyChanged(nameof(ClicksListHeading));
+        OnPropertyChanged(nameof(ClicksFlowQuestion));
+
+        if (StepItems.Count >= 4)
+        {
+            StepItems[2].Label = IsWebApiProfile ? "3. Endpoints" : "3. Screens";
+            StepItems[3].Label = IsWebApiProfile ? "4. Flow" : "4. Clicks";
+        }
+    }
+
     public string DescriptionGuidance => DomainScaffoldPolicy.UserGuidanceDescription;
     public string ClicksGuidance => DomainScaffoldPolicy.UserGuidanceClicks;
     public string HandOffGuidance => DomainScaffoldPolicy.UserGuidanceHandOff;
@@ -188,12 +259,22 @@ public partial class MainWindowViewModel : ObservableObject
 
     public IReadOnlyList<(WizardStep Step, string Title)> StepList { get; } = new (WizardStep, string)[]
     {
-        (WizardStep.YourIdea, "Ad-Lib"),
-        (WizardStep.WhatYouNeed, "Needs"),
-        (WizardStep.Screens, "Screens"),
-        (WizardStep.WhenTheyClick, "Clicks"),
-        (WizardStep.RememberStuff, "Remember"),
-        (WizardStep.HandOff, "Blueprint")
+        (WizardStep.YourIdea, "1. Idea"),
+        (WizardStep.WhatYouNeed, "2. Needs"),
+        (WizardStep.Screens, "3. Screens"),
+        (WizardStep.WhenTheyClick, "4. Clicks"),
+        (WizardStep.RememberStuff, "5. Remember"),
+        (WizardStep.HandOff, "6. Blueprint")
+    };
+
+    public ObservableCollection<WizardStepItem> StepItems { get; } = new()
+    {
+        new(WizardStep.YourIdea, 1, "1. Idea"),
+        new(WizardStep.WhatYouNeed, 2, "2. Needs"),
+        new(WizardStep.Screens, 3, "3. Screens"),
+        new(WizardStep.WhenTheyClick, 4, "4. Clicks"),
+        new(WizardStep.RememberStuff, 5, "5. Remember"),
+        new(WizardStep.HandOff, 6, "6. Blueprint")
     };
 
     [ObservableProperty] private WizardStep _currentStep;
@@ -236,6 +317,7 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private bool _isDarkMode = true;
     [ObservableProperty] private bool _initializeGitOnExport = true;
     [ObservableProperty] private int _selectedArtifactTabIndex;
+    [ObservableProperty] private int _wireframeRefreshVersion;
     [ObservableProperty] private string _blueprintJsonPreview = string.Empty;
     [ObservableProperty] private string _agentsMdPreview = string.Empty;
     [ObservableProperty] private string _specificationsPreview = string.Empty;
@@ -358,8 +440,13 @@ public partial class MainWindowViewModel : ObservableObject
         foreach (var kind in AppKinds)
             kind.IsSelected = kind == value;
 
-        if (value is null || _suppressKindChange) return;
+        if (value is null || _suppressKindChange)
+        {
+            NotifyProfileLabelsChanged();
+            return;
+        }
         ApplyProfileDefaults(value.ProfileId);
+        NotifyProfileLabelsChanged();
         MarkDirty();
     }
 
@@ -410,211 +497,38 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void NavigateToStep(WizardStep target)
+    {
+        if (target == CurrentStep) return;
+
+        // Validate only when advancing forward out of Idea or Needs
+        if (target > CurrentStep && !ValidateCurrentStep()) return;
+
+        if (CurrentStep == WizardStep.YourIdea)
+            EnsureDocumentFromIdea();
+        else if (CurrentStep == WizardStep.WhenTheyClick)
+            SyncClickFlowStepsToDocument();
+        else if (CurrentStep == WizardStep.RememberStuff)
+            ApplyRememberToDocument();
+
+        if (target > WizardStep.YourIdea)
+            EnsureDocumentFromIdea();
+
+        CurrentStep = target;
+
+        if (CurrentStep == WizardStep.Screens)
+            SyncReviewSelections();
+        else if (CurrentStep == WizardStep.WhenTheyClick)
+            SyncClickFlowsFromDocument();
+        else if (CurrentStep == WizardStep.HandOff)
+            RunReadyCheck();
+    }
+
+    [RelayCommand]
     private void Back()
     {
         if (CurrentStep > WizardStep.YourIdea)
             CurrentStep--;
-        if (CurrentStep == WizardStep.Screens)
-            SyncReviewSelections();
-        if (CurrentStep == WizardStep.WhenTheyClick)
-            SyncClickFlowsFromDocument();
-    }
-
-    [RelayCommand]
-    private void NewDocument()
-    {
-        if (!ConfirmDiscard()) return;
-        _suppressKindChange = true;
-        Answers.ProjectName = string.Empty;
-        Answers.Owner = string.Empty;
-        Answers.ClearAdLib();
-        Answers.SavePastResults = false;
-        Answers.IncludeSettingsScreen = false;
-        Answers.Memory = MemoryChoice.None;
-        SelectedAppKind = AppKinds[0];
-        ApplyProfileDefaults(SelectedAppKind.ProfileId);
-        SelectedTemplate = Templates[0];
-        Document = null;
-        _documentInitialized = false;
-        _documents.NewDocument(_schemaCatalog.RequireById(SelectedAppKind.ProfileId));
-        CurrentStep = WizardStep.YourIdea;
-        IsDirty = false;
-        _suppressKindChange = false;
-        DescriptionTips.Clear();
-        HubSections.Clear();
-        Recommendations.Clear();
-        SyncConnectivityLabel();
-        SyncDetailLevelLabel();
-        SyncAccountsLabel();
-        SyncMultiDeviceLabel();
-        SyncDecisionModeLabels();
-        ShowNotificationNotes = false;
-        StatusText = "Started a new app blueprint — fill in the ad-lib.";
-        UpdateTitle();
-        RefreshDescriptionTips();
-        OnPropertyChanged(nameof(SavePastResults));
-        OnPropertyChanged(nameof(IncludeSettingsScreen));
-        OnPropertyChanged(nameof(Notifications));
-        OnPropertyChanged(nameof(ShowStandardDetails));
-        OnPropertyChanged(nameof(ShowExpertDetails));
-    }
-
-    [RelayCommand]
-    private void OpenDocument()
-    {
-        if (!ConfirmDiscard()) return;
-        var path = _dialogs.OpenFile("App Blueprint JSON|*.json;*.ssot.json|All files|*.*", "Open App Blueprint");
-        if (path is null) return;
-
-        var doc = _documents.Open(path);
-        HydrateFromDocument(doc);
-        Document = doc;
-        _documentInitialized = true;
-        CurrentStep = WizardStep.Screens;
-        SyncReviewSelections();
-        IsDirty = false;
-        StatusText = $"Opened {path}. Review your screens, then continue.";
-        UpdateTitle();
-    }
-
-    [RelayCommand]
-    private void SaveDocument()
-    {
-        EnsureDocumentFromIdea();
-        CompileDocument();
-        var path = _documents.FilePath;
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            SaveDocumentAs();
-            return;
-        }
-
-        _documents.Save(path);
-        IsDirty = false;
-        StatusText = $"Saved {path}";
-        UpdateTitle();
-    }
-
-    [RelayCommand]
-    private void SaveDocumentAs()
-    {
-        EnsureDocumentFromIdea();
-        CompileDocument();
-        var suggested = $"{Answers.DerivedProjectId}.ssot.json";
-        var path = _dialogs.SaveFile("App Blueprint JSON|*.ssot.json;*.json", "Save App Blueprint", suggested);
-        if (path is null) return;
-        _documents.Save(path);
-        IsDirty = false;
-        StatusText = $"Saved {path}";
-        UpdateTitle();
-    }
-
-    [RelayCommand]
-    private void ExportJson()
-    {
-        EnsureDocumentFromIdea();
-        CompileDocument();
-        var path = _dialogs.SaveFile("App Blueprint JSON|*.ssot.json;*.json", "Export for AI agent", $"{Answers.DerivedProjectId}.ssot.json");
-        if (path is null) return;
-        _documents.ExportJson(path);
-        StatusText = $"Exported blueprint to {path}";
-    }
-
-    [RelayCommand]
-    private void ExportMarkdown()
-    {
-        EnsureDocumentFromIdea();
-        CompileDocument();
-        var path = _dialogs.SaveFile("Markdown|*.md", "Export Markdown", $"{Answers.DerivedProjectId}.md");
-        if (path is null) return;
-        _documents.ExportMarkdown(path);
-        StatusText = $"Exported Markdown to {path}";
-    }
-
-    [RelayCommand]
-    private void ExportAgentPackage()
-    {
-        EnsureDocumentFromIdea();
-        CompileDocument();
-        var folder = _dialogs.PickFolder("Choose folder for Agent Package");
-        if (folder is null) return;
-        var target = System.IO.Path.Combine(folder, Answers.DerivedProjectId + "-Agent-Package");
-        var written = _documents.ExportAgentPackage(target);
-        var msg = $"Exported agent package ({written.Count} files) to {target}";
-
-        if (InitializeGitOnExport)
-        {
-            if (AgentPackageExporter.InitializeGitRepository(target, Document!, out var gitMsg))
-                msg += $"\n\nGit: {gitMsg}";
-            else
-                msg += $"\n\nGit (note): {gitMsg}";
-        }
-
-        StatusText = $"Exported agent package to {target}";
-        _dialogs.ShowMessage($"{msg}\n\nIncludes project.json, AGENTS.md, .cursorrules, CLAUDE.md, specifications/, and tasks/.");
-    }
-
-    [RelayCommand]
-    private void RunReadyCheck()
-    {
-        EnsureDocumentFromIdea();
-        CompileDocument();
-        var profile = _schemaCatalog.RequireById(Answers.ProfileId);
-        var result = _readiness.Assess(Document!, profile);
-        var compat = _compatibility.EvaluateDocument(Document!, profile);
-        foreach (var issue in compat.Issues)
-        {
-            result.Issues.Add(new ValidationIssue
-            {
-                Severity = ValidationSeverity.Error,
-                Path = "compatibility",
-                Message = issue.Message + (string.IsNullOrWhiteSpace(issue.SuggestedFix) ? string.Empty : " " + issue.SuggestedFix)
-            });
-        }
-
-        ReadyMessages.Clear();
-        foreach (var issue in result.Issues)
-            ReadyMessages.Add(FriendlyIssueMapper.ToFriendlyMessage(issue));
-
-        IsReadyToExport = result.IsValid;
-        ReadySummary = FriendlyIssueMapper.FormatReport(result);
-        AppStory = BlueprintCompiler.BuildAppStory(Document!, Answers);
-        RefreshHub(result, compat.Issues);
-        RefreshRecommendations();
-        RefreshArtifactPreviews();
-        StatusText = IsReadyToExport
-            ? "Ready — you can save and hand this blueprint to an AI coding agent."
-            : "Not ready yet — resolve the items in the Blueprint hub.";
-    }
-
-    [RelayCommand]
-    private void ApplyRecommendation(BlueprintRecommendation? recommendation)
-    {
-        if (recommendation is null || !recommendation.CanApply) return;
-        EnsureDocumentFromIdea();
-        _recommendations.Apply(recommendation, Answers, Document);
-        OnPropertyChanged(nameof(SavePastResults));
-        CompileDocument();
-        RefreshRecommendations();
-        RunReadyCheck();
-        StatusText = $"Applied recommendation: {recommendation.Title}";
-    }
-
-    [RelayCommand]
-    private void ExplainRecommendation(BlueprintRecommendation? recommendation)
-    {
-        if (recommendation is null) return;
-        SelectedRecommendation = recommendation;
-        _dialogs.ShowMessage(
-            $"{recommendation.Title}\n\nWhy?\n{recommendation.Why}\n\nRule: {recommendation.RuleId}\nSuggested: {recommendation.SuggestedValue}",
-            "Why this recommendation?");
-    }
-
-    [RelayCommand]
-    private void JumpToHubSection(BlueprintHubSection? section)
-    {
-        if (section?.JumpToStep is null) return;
-        CurrentStep = section.JumpToStep.Value;
         if (CurrentStep == WizardStep.Screens)
             SyncReviewSelections();
         if (CurrentStep == WizardStep.WhenTheyClick)
@@ -636,6 +550,16 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void ShowAbout()
+    {
+        var window = new Views.AboutWindow(AppVersion, IsDarkMode)
+        {
+            Owner = Application.Current?.MainWindow
+        };
+        window.ShowDialog();
+    }
+
+    [RelayCommand]
     private void MarkReviewEdited() => MarkDirty();
 
     [RelayCommand]
@@ -643,29 +567,6 @@ public partial class MainWindowViewModel : ObservableObject
     {
         ComposeAdLibIntoDescription();
         RefreshDescriptionTips();
-    }
-
-    [RelayCommand]
-    private void CopyKickoffPrompt()
-    {
-        if (Document is null) return;
-        var sb = new StringBuilder();
-        var name = string.IsNullOrWhiteSpace(Document.Project.Name) ? "this application" : Document.Project.Name;
-        sb.AppendLine($"# AI Coding Agent Kickoff: {name}");
-        sb.AppendLine();
-        sb.AppendLine("Please build this application following the specification in `project.json` and `AGENTS.md` exactly:");
-        sb.AppendLine($"- Target: {Document.Environment.TargetOs} ({Document.Environment.Runtime}) using {Document.Environment.UiFramework} with {Document.Environment.Language}");
-        sb.AppendLine($"- Architecture Pattern: {Document.Architecture.Pattern} (Decision mode: {Document.Architecture.PatternDecision.Mode})");
-        sb.AppendLine($"- Data Storage: {Document.Data.Storage.Type} (Decision mode: {Document.Data.Storage.Decision.Mode})");
-        sb.AppendLine($"- Logging Required: {Document.Constraints.LoggingRequired}, Telemetry Allowed: {Document.Constraints.TelemetryAllowed}");
-        if (Document.Constraints.ForbiddenLibraries.Count > 0)
-            sb.AppendLine($"- Forbidden Libraries: {string.Join(", ", Document.Constraints.ForbiddenLibraries)}");
-        sb.AppendLine();
-        sb.AppendLine("Please execute the phased tasks starting with Phase 1 in `tasks/001-foundation.md`. Keep commits small and verified with tests.");
-
-        Clipboard.SetText(sb.ToString());
-        StatusText = "Copied AI agent kickoff prompt to clipboard!";
-        _dialogs.ShowMessage("Copied AI coding agent kickoff prompt to clipboard!\n\nYou can paste this directly to Claude, Cursor, Copilot, or Gemini CLI along with your exported Agent Package.", "Prompt Copied");
     }
 
     [RelayCommand]
@@ -680,6 +581,8 @@ public partial class MainWindowViewModel : ObservableObject
     {
         var app = Application.Current;
         if (app is null) return;
+        if (app.MainWindow is MainWindow mainWin)
+            MainWindow.ApplyImmersiveDarkMode(mainWin, darkMode);
 
         if (darkMode)
         {
@@ -733,238 +636,6 @@ public partial class MainWindowViewModel : ObservableObject
             app.Resources["TealSoftBrush"] = new SolidColorBrush(Color.FromRgb(0x1A, 0x55, 0x56));
             app.Resources["CoralBrush"] = new SolidColorBrush(Color.FromRgb(0xE8, 0x5D, 0x4C));
         }
-    }
-
-    [RelayCommand]
-    private void Undo()
-    {
-        var state = _undoManager.Undo(CurrentStep, Answers, Document);
-        if (state is null) return;
-        RestoreFromUndoState(state);
-        StatusText = $"Undid: {state.Description}";
-    }
-
-    [RelayCommand]
-    private void Redo()
-    {
-        var state = _undoManager.Redo(CurrentStep, Answers, Document);
-        if (state is null) return;
-        RestoreFromUndoState(state);
-        StatusText = $"Redid: {state.Description}";
-    }
-
-    public void RecordUndo(string description)
-    {
-        _undoManager.RecordSnapshot(description, CurrentStep, Answers, Document);
-        UpdateUndoState();
-    }
-
-    private void UpdateUndoState()
-    {
-        CanUndo = _undoManager.CanUndo;
-        CanRedo = _undoManager.CanRedo;
-    }
-
-    private void RestoreFromUndoState(UndoState state)
-    {
-        var options = SsotJsonOptions.Create();
-        if (!string.IsNullOrWhiteSpace(state.AnswersJson))
-        {
-            var restored = JsonSerializer.Deserialize<WizardAnswers>(state.AnswersJson, options);
-            if (restored != null)
-            {
-                Answers.ProjectName = restored.ProjectName;
-                Answers.Description = restored.Description;
-                Answers.Audience = restored.Audience;
-                Answers.HelpsThem = restored.HelpsThem;
-                Answers.FeatureListText = restored.FeatureListText;
-                Answers.ProductRules = restored.ProductRules;
-                Answers.LookStyle = restored.LookStyle;
-                Answers.Connectivity = restored.Connectivity;
-                Answers.Accounts = restored.Accounts;
-                Answers.MultiDevice = restored.MultiDevice;
-                Answers.Notifications = restored.Notifications;
-                Answers.NotificationNotes = restored.NotificationNotes;
-                Answers.SavePastResults = restored.SavePastResults;
-                Answers.IncludeSettingsScreen = restored.IncludeSettingsScreen;
-                Answers.Theme = restored.Theme;
-                Answers.NavigationPattern = restored.NavigationPattern;
-                Answers.ProfileId = restored.ProfileId;
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(state.DocumentJson))
-        {
-            Document = JsonSerializer.Deserialize<SsotDocument>(state.DocumentJson, options);
-            if (Document != null)
-            {
-                var profile = _schemaCatalog.RequireById(Answers.ProfileId);
-                _documents.ReplaceDocument(Document, profile, _documents.FilePath);
-            }
-        }
-
-        CurrentStep = state.Step;
-        SyncReviewSelections();
-        SyncClickFlowsFromDocument();
-        UpdateUndoState();
-        MarkDirty();
-    }
-
-    public void RefreshArtifactPreviews()
-    {
-        if (Document is null) return;
-        BlueprintJsonPreview = new JsonExporter().ToJson(Document);
-        AgentsMdPreview = AgentPackageExporter.BuildAgentsMd(Document);
-        SpecificationsPreview = AgentPackageExporter.BuildRequirements(Document);
-        TasksPreview = string.Join("\n\n---\n\n", AgentPackageExporter.BuildTasks(Document).Select(t => t.Body));
-    }
-
-    [RelayCommand]
-    private void AddScreen()
-    {
-        EnsureDocumentFromIdea();
-        if (Document is null) return;
-
-        RecordUndo("Add Screen");
-        var n = Document.Ui.Screens.Count(s => !IsSystemScreen(s)) + 1;
-        var screen = new ScreenInfo
-        {
-            Id = $"screen{n}",
-            Title = $"Screen {n}",
-            Route = n == 1 ? "/" : $"/screen{n}",
-            ScreenType = Answers.ProfileId.Equals("android_app", StringComparison.OrdinalIgnoreCase) ? "Screen" : "Dialog"
-        };
-        Document.Ui.Screens.Add(screen);
-        ReviewScreens.Add(screen);
-        SelectedScreen = screen;
-        MarkDirty();
-        StatusText = $"Added screen “{screen.Title}”.";
-    }
-
-    [RelayCommand]
-    private void RemoveScreen()
-    {
-        if (Document is null || SelectedScreen is null) return;
-        if (IsSystemScreen(SelectedScreen))
-        {
-            _dialogs.ShowMessage("History and Settings are controlled on the Remember step. Turn them off there instead.");
-            return;
-        }
-
-        if (Document.Ui.Screens.Count(s => !IsSystemScreen(s)) <= 1)
-        {
-            _dialogs.ShowMessage("Keep at least one main screen.");
-            return;
-        }
-
-        RecordUndo($"Remove Screen '{SelectedScreen.Title}'");
-        Document.Ui.Screens.Remove(SelectedScreen);
-        ReviewScreens.Remove(SelectedScreen);
-        SelectedScreen = ReviewScreens.FirstOrDefault();
-        MarkDirty();
-    }
-
-    [RelayCommand]
-    private void MoveScreenUp() => MoveSelectedScreen(-1);
-
-    [RelayCommand]
-    private void MoveScreenDown() => MoveSelectedScreen(1);
-
-    [RelayCommand]
-    private void MoveControlUp() => MoveSelectedControl(-1);
-
-    [RelayCommand]
-    private void MoveControlDown() => MoveSelectedControl(1);
-
-    private void MoveSelectedControl(int delta)
-    {
-        if (SelectedScreen is null || SelectedControl is null) return;
-        var index = SelectedScreen.Controls.IndexOf(SelectedControl);
-        var newIndex = index + delta;
-        if (index < 0 || newIndex < 0 || newIndex >= SelectedScreen.Controls.Count) return;
-
-        RecordUndo("Reorder Control");
-        var control = SelectedControl;
-        SelectedScreen.Controls.RemoveAt(index);
-        SelectedScreen.Controls.Insert(newIndex, control);
-
-        var reviewIndex = ReviewControls.IndexOf(control);
-        if (reviewIndex >= 0)
-        {
-            var reviewNew = Math.Clamp(reviewIndex + delta, 0, ReviewControls.Count - 1);
-            ReviewControls.Move(reviewIndex, reviewNew);
-        }
-
-        SelectedControl = control;
-        ScreenCaption = BlueprintCompiler.ScreenCaption(SelectedScreen);
-        MarkDirty();
-    }
-
-    [RelayCommand]
-    private void AddChoiceList() => AddThing(BlueprintThingKind.ChoiceList);
-
-    [RelayCommand]
-    private void AddPlaceToType() => AddThing(BlueprintThingKind.PlaceToType);
-
-    [RelayCommand]
-    private void AddButtonThing() => AddThing(BlueprintThingKind.Button);
-
-    [RelayCommand]
-    private void AddResultsList() => AddThing(BlueprintThingKind.ResultsList);
-
-    [RelayCommand]
-    private void RemoveThing()
-    {
-        if (SelectedScreen is null || SelectedControl is null) return;
-        RecordUndo($"Remove Thing '{SelectedControl.Label}'");
-        SelectedScreen.Controls.Remove(SelectedControl);
-        ReviewControls.Remove(SelectedControl);
-        SelectedControl = ReviewControls.FirstOrDefault();
-        ScreenCaption = BlueprintCompiler.ScreenCaption(SelectedScreen);
-        MarkDirty();
-    }
-
-    private void AddThing(BlueprintThingKind kind)
-    {
-        EnsureDocumentFromIdea();
-        if (Document is null || SelectedScreen is null)
-        {
-            _dialogs.ShowMessage("Select or add a screen first, then add things to it.");
-            return;
-        }
-
-        RecordUndo($"Add {WizardAnswers.ThingLabel(kind)}");
-        var profile = _schemaCatalog.RequireById(Answers.ProfileId);
-        var types = BlueprintCompiler.ResolveControlTypes(profile);
-        var control = BlueprintCompiler.CreateThing(kind, types, SelectedScreen.Controls.Count + 1);
-        SelectedScreen.Controls.Add(control);
-        ReviewControls.Add(control);
-        SelectedControl = control;
-        ScreenCaption = BlueprintCompiler.ScreenCaption(SelectedScreen);
-        MarkDirty();
-        StatusText = $"Added {WizardAnswers.ThingLabel(kind).ToLowerInvariant()} “{control.Label}”.";
-    }
-
-    private void MoveSelectedScreen(int delta)
-    {
-        if (Document is null || SelectedScreen is null) return;
-        var index = Document.Ui.Screens.IndexOf(SelectedScreen);
-        var newIndex = index + delta;
-        if (index < 0 || newIndex < 0 || newIndex >= Document.Ui.Screens.Count) return;
-
-        RecordUndo("Reorder Screen");
-        var screen = SelectedScreen;
-        Document.Ui.Screens.RemoveAt(index);
-        Document.Ui.Screens.Insert(newIndex, screen);
-        var reviewIndex = ReviewScreens.IndexOf(screen);
-        if (reviewIndex >= 0)
-        {
-            var reviewNew = Math.Clamp(reviewIndex + delta, 0, ReviewScreens.Count - 1);
-            ReviewScreens.Move(reviewIndex, reviewNew);
-        }
-
-        SelectedScreen = screen;
-        MarkDirty();
     }
 
     private void EnsureDocumentFromIdea()
@@ -1045,29 +716,6 @@ public partial class MainWindowViewModel : ObservableObject
             NavigationOptions.Add(nav);
     }
 
-    private void RefreshHub(ValidationResult result, IReadOnlyList<CompatibilityIssue> compatIssues)
-    {
-        var assessment = BlueprintHubAssessor.Assess(Document, Answers, result, compatIssues);
-        HubSections.Clear();
-        foreach (var section in assessment.Sections)
-            HubSections.Add(section);
-
-        HubProgressCaption = assessment.ProgressCaption;
-        TechSummary = assessment.TechSummary;
-        HubReadyPercent = assessment.ReadyPercent;
-        DecisionsRemaining = assessment.DecisionsRemaining;
-        ProgressText = assessment.ProgressCaption;
-        ProgressValue = assessment.ReadyPercent / 100.0;
-    }
-
-    private void RefreshRecommendations()
-    {
-        Recommendations.Clear();
-        foreach (var item in _recommendations.Evaluate(Document, Answers))
-            Recommendations.Add(item);
-        SelectedRecommendation = Recommendations.FirstOrDefault();
-    }
-
     private void SyncConnectivityLabel()
     {
         SelectedConnectivityLabel = Answers.Connectivity switch
@@ -1138,14 +786,24 @@ public partial class MainWindowViewModel : ObservableObject
         CanGoNext = CurrentStep < WizardStep.HandOff;
         IsReadyStep = CurrentStep == WizardStep.HandOff;
 
+        foreach (var item in StepItems)
+        {
+            item.IsCurrent = item.Step == CurrentStep;
+            item.IsCompleted = item.Step < CurrentStep;
+        }
+
         (StepTitle, StepSubtitle) = CurrentStep switch
         {
             WizardStep.YourIdea => ("Tell us about your app",
                 "Fill in the blanks — no jargon required. We’ll only ask technical questions later if something is missing."),
             WizardStep.WhatYouNeed => ("What does your app need?",
                 "Ordinary questions about accounts, devices, and reminders. “I’m not sure” is always OK."),
-            WizardStep.Screens => ("Screens", "Build what people see. Add everyday things — not technical jargon."),
-            WizardStep.WhenTheyClick => ("When they click", "Write business steps here; together with your description they drive the real data model."),
+            WizardStep.Screens => IsWebApiProfile
+                ? ("Endpoints & Routes", "Define API resource groups, parameters, and endpoints.")
+                : ("Screens", "Build what people see. Add everyday things — not technical jargon."),
+            WizardStep.WhenTheyClick => IsWebApiProfile
+                ? ("Request / Response Flow", "Describe validation, data access, and response steps for each endpoint.")
+                : ("When they click", "Write business steps here; together with your description they drive the real data model."),
             WizardStep.RememberStuff => ("Remember stuff?", "Only turn these on if you really need them."),
             WizardStep.HandOff => ("Project Blueprint",
                 "Command center: recommendations with Why?, completeness, detail level, then export for an AI coding agent."),
@@ -1209,80 +867,6 @@ public partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    private void SyncReviewSelections()
-    {
-        if (Document is null) return;
-        ReviewScreens.Clear();
-        foreach (var screen in Document.Ui.Screens)
-            ReviewScreens.Add(screen);
-        SelectedScreen = ReviewScreens.FirstOrDefault();
-        ReloadReviewControls();
-        SelectedControl = ReviewControls.FirstOrDefault();
-        ScreenCaption = BlueprintCompiler.ScreenCaption(SelectedScreen);
-    }
-
-    private void ReloadReviewControls()
-    {
-        ReviewControls.Clear();
-        if (SelectedScreen?.Controls is null) return;
-        foreach (var control in SelectedScreen.Controls)
-            ReviewControls.Add(control);
-    }
-
-    private void SyncClickFlowsFromDocument()
-    {
-        if (Document is null) return;
-        CompileDocumentLightWorkflows();
-
-        var previous = SelectedClickFlow?.Button.Id;
-        ClickFlows.Clear();
-        var buttons = Document.Ui.Screens.SelectMany(s => s.Controls)
-            .Where(c => IsButtonType(c.Type))
-            .ToList();
-
-        foreach (var button in buttons)
-        {
-            var workflow = Document.Workflows.FirstOrDefault(w =>
-                w.Trigger.Equals(button.Id, StringComparison.OrdinalIgnoreCase));
-            if (workflow is null)
-            {
-                workflow = new WorkflowInfo
-                {
-                    Id = button.Id,
-                    Name = button.Label,
-                    Trigger = button.Id,
-                    Steps = { "Read the user's current choices", "Do the action", "Show the outcome on screen" },
-                    ErrorHandling = new ErrorHandlingInfo { Strategy = "ShowMessageBox", LogLevel = "Warning" }
-                };
-                Document.Workflows.Add(workflow);
-            }
-
-            ClickFlows.Add(new ClickFlowOption(button, workflow));
-        }
-
-        SelectedClickFlow = ClickFlows.FirstOrDefault(c => c.Button.Id == previous) ?? ClickFlows.FirstOrDefault();
-    }
-
-    private void CompileDocumentLightWorkflows()
-    {
-        if (Document is null) return;
-        var profile = _schemaCatalog.RequireById(Answers.ProfileId);
-        Document = _compiler.Compile(Document, Answers, profile);
-        _documents.ReplaceDocument(Document, profile, _documents.FilePath);
-    }
-
-    private void SyncClickFlowStepsToDocument()
-    {
-        foreach (var flow in ClickFlows)
-        {
-            flow.Workflow.Steps = flow.StepsText
-                .Split(new[] { "\r\n", "\n" }, StringSplitOptions.None)
-                .Select(s => s.Trim())
-                .Where(s => s.Length > 0)
-                .ToList();
-        }
-    }
-
     private void CommitAnswersToDocument()
     {
         if (Document is null) return;
@@ -1298,87 +882,11 @@ public partial class MainWindowViewModel : ObservableObject
         Document.Ui.NavigationPattern = Answers.NavigationPattern;
     }
 
-    private void HydrateFromDocument(SsotDocument doc)
-    {
-        _suppressKindChange = true;
-        var match = AppKinds.FirstOrDefault(k =>
-            string.Equals(_schemaCatalog.RequireById(k.ProfileId).EnvironmentDefaults.UiFramework,
-                doc.Environment.UiFramework, StringComparison.OrdinalIgnoreCase));
-        SelectedAppKind = match ?? AppKinds[0];
-
-        var profile = _schemaCatalog.RequireById(SelectedAppKind.ProfileId);
-        Answers.ProfileId = profile.Id;
-        Answers.ProjectName = doc.Project.Name;
-        Answers.HydrateAdLibFromDescription(doc.Project.Description);
-        Answers.Owner = doc.Project.Owner;
-        Answers.TargetOs = doc.Environment.TargetOs;
-        Answers.Runtime = doc.Environment.Runtime;
-        Answers.UiFramework = doc.Environment.UiFramework;
-        Answers.Language = doc.Environment.Language;
-        Answers.Theme = doc.Ui.Theme;
-        Answers.NavigationPattern = doc.Ui.NavigationPattern;
-
-        Answers.Accounts = doc.Requirements.Accounts switch
-        {
-            "separate" => AccountsChoice.Separate,
-            "unsure" => AccountsChoice.Unsure,
-            _ => AccountsChoice.None
-        };
-        Answers.MultiDevice = doc.Requirements.MultiDevice switch
-        {
-            "yes" => MultiDeviceChoice.Yes,
-            "later" => MultiDeviceChoice.Later,
-            _ => MultiDeviceChoice.No
-        };
-        Answers.Notifications = doc.Requirements.Notifications;
-        Answers.NotificationNotes = doc.Requirements.NotificationNotes ?? string.Empty;
-        Answers.ArchitectureDecision = doc.Architecture.PatternDecision.Mode switch
-        {
-            "agent_discretion" => TechnicalDecisionMode.AgentDiscretion,
-            "specified" => TechnicalDecisionMode.ChooseMyself,
-            _ => TechnicalDecisionMode.Recommended
-        };
-        Answers.StorageDecision = doc.Data.Storage.Decision.Mode switch
-        {
-            "agent_discretion" => TechnicalDecisionMode.AgentDiscretion,
-            "specified" => TechnicalDecisionMode.ChooseMyself,
-            _ => TechnicalDecisionMode.Recommended
-        };
-
-        Answers.SavePastResults = doc.Ui.Screens.Any(s => s.Id.Equals("history", StringComparison.OrdinalIgnoreCase))
-                                  || !string.Equals(doc.Data.Storage.Type, "None", StringComparison.OrdinalIgnoreCase);
-        Answers.IncludeSettingsScreen = doc.Ui.Screens.Any(s => s.Id.Equals("settings", StringComparison.OrdinalIgnoreCase));
-        Answers.Memory = Answers.SavePastResults ? MemoryChoice.SimpleFiles : MemoryChoice.None;
-
-        SelectedTemplate = Templates.FirstOrDefault(t => t.Id == "blank") ?? Templates[0];
-        RefreshOptionLists(profile);
-        SyncConnectivityLabel();
-        SyncDetailLevelLabel();
-        SyncAccountsLabel();
-        SyncMultiDeviceLabel();
-        SyncDecisionModeLabels();
-        ShowNotificationNotes = Answers.Notifications;
-        _documents.SetProfile(profile);
-        _suppressKindChange = false;
-        OnPropertyChanged(nameof(SavePastResults));
-        OnPropertyChanged(nameof(IncludeSettingsScreen));
-        OnPropertyChanged(nameof(Notifications));
-        OnPropertyChanged(nameof(ShowStandardDetails));
-        OnPropertyChanged(nameof(ShowExpertDetails));
-        RefreshDescriptionTips();
-    }
-
     private void RefreshDescriptionTips()
     {
         DescriptionTips.Clear();
         foreach (var tip in BlueprintTemplates.SuggestFromDescription(Answers.Description))
             DescriptionTips.Add(tip);
-    }
-
-    private bool ConfirmDiscard()
-    {
-        if (!IsDirty) return true;
-        return _dialogs.Confirm("Discard unsaved changes?");
     }
 
     private void MarkDirty()
@@ -1393,15 +901,4 @@ public partial class MainWindowViewModel : ObservableObject
         var dirty = IsDirty ? "*" : string.Empty;
         WindowTitle = $"Core AI Architect — {name}{dirty}";
     }
-
-    private static bool IsSystemScreen(ScreenInfo screen) =>
-        screen.Id.Equals("history", StringComparison.OrdinalIgnoreCase)
-        || screen.Id.Equals("settings", StringComparison.OrdinalIgnoreCase);
-
-    private static bool IsButtonType(string type) =>
-        type.Equals("Button", StringComparison.OrdinalIgnoreCase)
-        || type.Equals("Command", StringComparison.OrdinalIgnoreCase)
-        || type.Equals("Cmdlet", StringComparison.OrdinalIgnoreCase)
-        || type.Equals("Endpoint", StringComparison.OrdinalIgnoreCase)
-        || type.Equals("Stage", StringComparison.OrdinalIgnoreCase);
 }

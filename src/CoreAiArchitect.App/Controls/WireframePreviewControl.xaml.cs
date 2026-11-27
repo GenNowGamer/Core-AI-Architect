@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using CoreAiArchitect.Core.Models.Ssot;
 
@@ -12,14 +13,28 @@ public partial class WireframePreviewControl : UserControl
             nameof(Screen),
             typeof(ScreenInfo),
             typeof(WireframePreviewControl),
-            new PropertyMetadata(null, OnScreenChanged));
+            new PropertyMetadata(null, OnVisualPropertyChanged));
 
     public static readonly DependencyProperty ProfileIdProperty =
         DependencyProperty.Register(
             nameof(ProfileId),
             typeof(string),
             typeof(WireframePreviewControl),
-            new PropertyMetadata("wpf_desktop", OnProfileChanged));
+            new PropertyMetadata("wpf_desktop", OnVisualPropertyChanged));
+
+    public static readonly DependencyProperty SelectedControlProperty =
+        DependencyProperty.Register(
+            nameof(SelectedControl),
+            typeof(ControlInfo),
+            typeof(WireframePreviewControl),
+            new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, OnVisualPropertyChanged));
+
+    public static readonly DependencyProperty RefreshVersionProperty =
+        DependencyProperty.Register(
+            nameof(RefreshVersion),
+            typeof(int),
+            typeof(WireframePreviewControl),
+            new PropertyMetadata(0, OnVisualPropertyChanged));
 
     public ScreenInfo? Screen
     {
@@ -33,18 +48,24 @@ public partial class WireframePreviewControl : UserControl
         set => SetValue(ProfileIdProperty, value);
     }
 
+    public ControlInfo? SelectedControl
+    {
+        get => (ControlInfo?)GetValue(SelectedControlProperty);
+        set => SetValue(SelectedControlProperty, value);
+    }
+
+    public int RefreshVersion
+    {
+        get => (int)GetValue(RefreshVersionProperty);
+        set => SetValue(RefreshVersionProperty, value);
+    }
+
     public WireframePreviewControl()
     {
         InitializeComponent();
     }
 
-    private static void OnScreenChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        if (d is WireframePreviewControl control)
-            control.Refresh();
-    }
-
-    private static void OnProfileChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    private static void OnVisualPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is WireframePreviewControl control)
             control.Refresh();
@@ -56,24 +77,29 @@ public partial class WireframePreviewControl : UserControl
         var profile = ProfileId ?? "wpf_desktop";
         var isAndroid = profile.Equals("android_app", StringComparison.OrdinalIgnoreCase);
 
+        var sandDeepBrush = ResolveBrush("SandDeepBrush", Color.FromRgb(0x22, 0x26, 0x2E));
+        var cardBrush = ResolveBrush("CardBrush", Color.FromRgb(0x23, 0x27, 0x30));
+        var inkBrush = ResolveBrush("InkBrush", Color.FromRgb(0xEE, 0xF1, 0xF5));
+        var secondaryBrush = ResolveBrush("TextSecondaryBrush", Color.FromRgb(0xA6, 0xB0, 0xC0));
+
         // Frame styling
         if (isAndroid)
         {
             WindowGlyph.Text = "📱";
             WindowButtons.Visibility = Visibility.Collapsed;
-            TitleBar.Background = new SolidColorBrush(Color.FromRgb(0x2E, 0x50, 0x47));
+            TitleBar.Background = new SolidColorBrush(Color.FromRgb(0x1E, 0x3B, 0x3E));
             ScreenTitleText.Foreground = Brushes.White;
-            ScreenTypeBadge.Background = new SolidColorBrush(Color.FromRgb(0x42, 0x73, 0x67));
+            ScreenTypeBadge.Background = new SolidColorBrush(Color.FromRgb(0x2A, 0x56, 0x5A));
             ScreenTypeText.Foreground = Brushes.White;
         }
         else
         {
             WindowGlyph.Text = "🗖";
             WindowButtons.Visibility = Visibility.Visible;
-            TitleBar.Background = new SolidColorBrush(Color.FromRgb(0xE8, 0xE2, 0xD8));
-            ScreenTitleText.Foreground = new SolidColorBrush(Color.FromRgb(0x33, 0x33, 0x33));
-            ScreenTypeBadge.Background = new SolidColorBrush(Color.FromRgb(0xD5, 0xCB, 0xBF));
-            ScreenTypeText.Foreground = new SolidColorBrush(Color.FromRgb(0x22, 0x22, 0x22));
+            TitleBar.Background = sandDeepBrush;
+            ScreenTitleText.Foreground = inkBrush;
+            ScreenTypeBadge.Background = cardBrush;
+            ScreenTypeText.Foreground = secondaryBrush;
         }
 
         ScreenTitleText.Text = string.IsNullOrWhiteSpace(screen?.Title) ? "Untitled Screen" : screen.Title;
@@ -96,19 +122,38 @@ public partial class WireframePreviewControl : UserControl
         }
     }
 
+    private Brush ResolveBrush(string resourceKey, Color fallback) =>
+        TryFindResource(resourceKey) as Brush ?? new SolidColorBrush(fallback);
+
     private FrameworkElement CreateControlWidget(ControlInfo control, bool isAndroid)
     {
         var type = control.Type ?? "Button";
         var label = string.IsNullOrWhiteSpace(control.Label) ? control.Id : control.Label;
 
+        var cardBrush = ResolveBrush("CardBrush", Color.FromRgb(0x23, 0x27, 0x30));
+        var cardBorderBrush = ResolveBrush("CardBorderBrush", Color.FromRgb(0x35, 0x3D, 0x4B));
+        var inputBgBrush = ResolveBrush("InputBackgroundBrush", Color.FromRgb(0x12, 0x14, 0x19));
+        var inputBorderBrush = ResolveBrush("InputBorderBrush", Color.FromRgb(0x3E, 0x47, 0x56));
+        var inkBrush = ResolveBrush("InkBrush", Color.FromRgb(0xEE, 0xF1, 0xF5));
+        var secondaryBrush = ResolveBrush("TextSecondaryBrush", Color.FromRgb(0xA6, 0xB0, 0xC0));
+        var tealBrush = ResolveBrush("TealBrush", Color.FromRgb(0x4E, 0xB8, 0xB5));
+        var coralBrush = ResolveBrush("CoralBrush", Color.FromRgb(0xFA, 0x7E, 0x6B));
+
+        var isSelected = ReferenceEquals(control, SelectedControl);
         var container = new Border
         {
             Margin = new Thickness(0, 0, 0, 10),
             Padding = new Thickness(10),
-            Background = Brushes.White,
-            BorderBrush = new SolidColorBrush(Color.FromRgb(0xDF, 0xD8, 0xCE)),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(6)
+            Background = cardBrush,
+            BorderBrush = isSelected ? tealBrush : cardBorderBrush,
+            BorderThickness = new Thickness(isSelected ? 2 : 1),
+            CornerRadius = new CornerRadius(6),
+            Cursor = Cursors.Hand
+        };
+        container.MouseLeftButtonUp += (_, e) =>
+        {
+            SelectedControl = control;
+            e.Handled = true;
         };
 
         var stack = new StackPanel();
@@ -117,7 +162,7 @@ public partial class WireframePreviewControl : UserControl
         {
             var btn = new Border
             {
-                Background = isAndroid ? new SolidColorBrush(Color.FromRgb(0x0F, 0x3D, 0x3E)) : new SolidColorBrush(Color.FromRgb(0xE2, 0x6D, 0x5C)),
+                Background = isAndroid ? tealBrush : coralBrush,
                 CornerRadius = new CornerRadius(16),
                 Padding = new Thickness(14, 8, 14, 8),
                 HorizontalAlignment = HorizontalAlignment.Center
@@ -139,22 +184,22 @@ public partial class WireframePreviewControl : UserControl
                 Text = label,
                 FontSize = 12,
                 FontWeight = FontWeights.SemiBold,
-                Foreground = new SolidColorBrush(Color.FromRgb(0x44, 0x44, 0x44)),
+                Foreground = inkBrush,
                 Margin = new Thickness(0, 0, 0, 4)
             });
             var dropBorder = new Border
             {
-                BorderBrush = new SolidColorBrush(Color.FromRgb(0xCC, 0xC4, 0xB8)),
+                BorderBrush = inputBorderBrush,
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(4),
                 Padding = new Thickness(8, 6, 8, 6),
-                Background = new SolidColorBrush(Color.FromRgb(0xF7, 0xF5, 0xF0))
+                Background = inputBgBrush
             };
             var dropGrid = new Grid();
             dropGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             dropGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            var txt = new TextBlock { Text = "Pick an option...", FontSize = 12, Foreground = Brushes.Gray };
-            var arrow = new TextBlock { Text = "▾", FontSize = 12, Foreground = Brushes.Gray };
+            var txt = new TextBlock { Text = "Pick an option...", FontSize = 12, Foreground = secondaryBrush };
+            var arrow = new TextBlock { Text = "▾", FontSize = 12, Foreground = secondaryBrush };
             Grid.SetColumn(arrow, 1);
             dropGrid.Children.Add(txt);
             dropGrid.Children.Add(arrow);
@@ -168,21 +213,21 @@ public partial class WireframePreviewControl : UserControl
                 Text = label,
                 FontSize = 12,
                 FontWeight = FontWeights.SemiBold,
-                Foreground = new SolidColorBrush(Color.FromRgb(0x44, 0x44, 0x44)),
+                Foreground = inkBrush,
                 Margin = new Thickness(0, 0, 0, 4)
             });
             var listBorder = new Border
             {
-                BorderBrush = new SolidColorBrush(Color.FromRgb(0xCC, 0xC4, 0xB8)),
+                BorderBrush = inputBorderBrush,
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(4),
                 Padding = new Thickness(6),
-                Background = new SolidColorBrush(Color.FromRgb(0xFA, 0xFA, 0xF8)),
+                Background = inputBgBrush,
                 MinHeight = 50
             };
             var listStack = new StackPanel();
-            listStack.Children.Add(new TextBlock { Text = "• Sample item 1", FontSize = 11, Foreground = Brushes.DimGray, Margin = new Thickness(0, 2, 0, 2) });
-            listStack.Children.Add(new TextBlock { Text = "• Sample item 2", FontSize = 11, Foreground = Brushes.DimGray, Margin = new Thickness(0, 2, 0, 2) });
+            listStack.Children.Add(new TextBlock { Text = "• Sample item 1", FontSize = 11, Foreground = secondaryBrush, Margin = new Thickness(0, 2, 0, 2) });
+            listStack.Children.Add(new TextBlock { Text = "• Sample item 2", FontSize = 11, Foreground = secondaryBrush, Margin = new Thickness(0, 2, 0, 2) });
             listBorder.Child = listStack;
             stack.Children.Add(listBorder);
         }
@@ -194,18 +239,18 @@ public partial class WireframePreviewControl : UserControl
                 Text = label,
                 FontSize = 12,
                 FontWeight = FontWeights.SemiBold,
-                Foreground = new SolidColorBrush(Color.FromRgb(0x44, 0x44, 0x44)),
+                Foreground = inkBrush,
                 Margin = new Thickness(0, 0, 0, 4)
             });
             var boxBorder = new Border
             {
-                BorderBrush = new SolidColorBrush(Color.FromRgb(0xCC, 0xC4, 0xB8)),
+                BorderBrush = inputBorderBrush,
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(4),
                 Padding = new Thickness(8, 6, 8, 6),
-                Background = Brushes.White
+                Background = inputBgBrush
             };
-            boxBorder.Child = new TextBlock { Text = "Enter text or number...", FontSize = 12, Foreground = Brushes.LightGray };
+            boxBorder.Child = new TextBlock { Text = "Enter text or number...", FontSize = 12, Foreground = secondaryBrush };
             stack.Children.Add(boxBorder);
         }
 

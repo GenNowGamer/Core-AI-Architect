@@ -21,13 +21,6 @@ public sealed class AgentPackageExporter
         _json.ExportToFile(document, projectJson);
         written.Add(projectJson);
 
-        var ssotName = string.IsNullOrWhiteSpace(document.Project.Id)
-            ? "app-blueprint.ssot.json"
-            : document.Project.Id + ".ssot.json";
-        var ssotPath = Path.Combine(directory, ssotName);
-        _json.ExportToFile(document, ssotPath);
-        written.Add(ssotPath);
-
         var agents = Path.Combine(directory, "AGENTS.md");
         File.WriteAllText(agents, BuildAgentsMd(document));
         written.Add(agents);
@@ -36,9 +29,21 @@ public sealed class AgentPackageExporter
         File.WriteAllText(cursorRules, BuildCursorRules(document));
         written.Add(cursorRules);
 
+        var cursorRulesDir = Path.Combine(directory, ".cursor", "rules");
+        Directory.CreateDirectory(cursorRulesDir);
+        var cursorMdc = Path.Combine(cursorRulesDir, "project.mdc");
+        File.WriteAllText(cursorMdc, BuildCursorMdc(document));
+        written.Add(cursorMdc);
+
         var claudeMd = Path.Combine(directory, "CLAUDE.md");
         File.WriteAllText(claudeMd, BuildClaudeMd(document));
         written.Add(claudeMd);
+
+        var githubDir = Path.Combine(directory, ".github");
+        Directory.CreateDirectory(githubDir);
+        var copilotMd = Path.Combine(githubDir, "copilot-instructions.md");
+        File.WriteAllText(copilotMd, BuildCopilotInstructions(document));
+        written.Add(copilotMd);
 
         var geminiDir = Path.Combine(directory, ".gemini");
         Directory.CreateDirectory(geminiDir);
@@ -102,7 +107,7 @@ public sealed class AgentPackageExporter
         sb.AppendLine();
         sb.AppendLine("## Source of truth");
         sb.AppendLine();
-        sb.AppendLine("1. Read `project.json` (same content as the `.ssot.json` sibling).");
+        sb.AppendLine("1. Read `project.json` (the sole canonical App Blueprint SSOT).");
         sb.AppendLine("2. Follow `specifications/` for human-readable detail.");
         sb.AppendLine("3. Execute `tasks/` in order unless the user reprioritizes.");
         sb.AppendLine("4. Obey the SSOT contract below for decision modes and empty collections.");
@@ -317,6 +322,35 @@ public sealed class AgentPackageExporter
         sb.AppendLine("1. Review `project.json` and `specifications/` before writing code.");
         sb.AppendLine("2. Complete phases sequentially as outlined in `tasks/`.");
         sb.AppendLine("3. If domain entities say Scaffold only, invent a richer domain model fulfilling `project.description` and workflow steps.");
+        return sb.ToString();
+    }
+
+    private static string BuildCursorMdc(SsotDocument document)
+    {
+        var name = string.IsNullOrWhiteSpace(document.Project.Name) ? "Application" : document.Project.Name;
+        var sb = new StringBuilder();
+        sb.AppendLine("---");
+        sb.AppendLine($"description: Core AI Architect blueprint rules for {name}");
+        sb.AppendLine("alwaysApply: true");
+        sb.AppendLine("---");
+        sb.AppendLine();
+        sb.Append(BuildCursorRules(document));
+        return sb.ToString();
+    }
+
+    private static string BuildCopilotInstructions(SsotDocument document)
+    {
+        var name = string.IsNullOrWhiteSpace(document.Project.Name) ? "Application" : document.Project.Name;
+        var sb = new StringBuilder();
+        sb.AppendLine($"# GitHub Copilot Instructions — {name}");
+        sb.AppendLine();
+        sb.AppendLine("Use `project.json` as the Single Source of Truth (SSOT) for this project.");
+        sb.AppendLine($"- Target: {document.Environment.TargetOs} / {document.Environment.Runtime}");
+        sb.AppendLine($"- UI & Language: {document.Environment.UiFramework} ({document.Environment.Language})");
+        sb.AppendLine($"- Architecture: {document.Architecture.Pattern}");
+        sb.AppendLine($"- Storage: {document.Data.Storage.Type}");
+        sb.AppendLine();
+        sb.AppendLine("Follow `specifications/` for detailed requirements and execute `tasks/` sequentially.");
         return sb.ToString();
     }
 

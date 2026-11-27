@@ -23,11 +23,11 @@ Windows 11 desktop tool that authors a canonical JSON **App Blueprint** (SSOT �
 
 1. Fill a **guided Ad-Lib** (who it’s for, what it helps them do, main capabilities) plus optional product rules / starter templates (Blank, Master-Detail / Catalog, Dashboard & Analytics, File / Batch Processor, Simple form, List + save history)
 2. Answer plain-language **Needs** (accounts, multi-device, notifications)
-3. Build **screens** with visual controls: choice lists, places to type, buttons, results lists, and interactive wireframes with live reordering
-4. Write plain-English steps for **when someone clicks** each button
+3. Jump between any step via the **clickable 6-step stepper bar** and build **screens** (or **endpoint groups** for `web_api`) with a **live, interactive dark-themed wireframe canvas** and ▲ / ▼ control reordering
+4. Write plain-English steps for **when someone clicks** each button (or request/response flow for API endpoints)
 5. Optionally turn on History / Settings (**Remember**)
-6. Review the **Project Blueprint** hub with deterministic recommendations, in-app artifact inspection tabs (App Story, Blueprint JSON, AGENTS.md, Specifications, Tasks), Undo/Redo support, automated git workspace initialization, and one-click "Copy Kickoff Prompt"
-7. Save and export **App Blueprint** JSON, Markdown, or a full **Agent Package** folder with agent context files (`.cursorrules`, `CLAUDE.md`, `.gemini/config.json`)
+6. Review the **Project Blueprint** hub with deterministic recommendations, in-app artifact inspection tabs (`App Story`, `Blueprint JSON`, `AGENTS.md`, `Specifications`, `Tasks`), Undo/Redo support, **Recent Blueprints** history, **Help → About** version info, automated git workspace initialization, and one-click **"Copy Kickoff Prompt"**
+7. Save and export **App Blueprint** JSON, Markdown, or a full **Agent Package** folder with `project.json` and agent context files (`AGENTS.md`, `.cursor/rules/project.mdc`, `.cursorrules`, `.github/copilot-instructions.md`, `CLAUDE.md`, `.gemini/config.json`)
 
 Technical defaults (theme, navigation, architecture, build targets) are filled automatically from the form profile. Starter templates seed customizable screens.
 
@@ -35,12 +35,12 @@ Technical defaults (theme, navigation, architecture, build targets) are filled a
 
 | Project | Role |
 |---|---|
-| `src/CoreAiArchitect.Core` | SSOT model, schema catalog, `BlueprintCompiler`, schema versioning & migrations, `UndoManager`, recommendations, JSON/Markdown/Agent Package exporters |
-| `src/CoreAiArchitect.App` | Modern Windows 11 Fluent dark-themed WPF wizard (Ad-Lib → Needs → Screens → Blueprint hub) with live wireframe mockup canvas and inspection tabs |
+| `src/CoreAiArchitect.Core` | SSOT model, schema catalog, `BlueprintCompiler`, schema versioning & migrations, `UndoManager`, `UserSettings`, recommendations, JSON/Markdown/Agent Package exporters |
+| `src/CoreAiArchitect.App` | Modern Windows 11 dark-themed WPF wizard (with native dark title bar, clickable stepper, live interactive wireframe canvas, inspection tabs, and `Help → About`) |
 | `src/CoreAiArchitect.PowerShell` | PowerShell 7+ binary module |
-| `src/CoreAiArchitect.Installer` | WiX v5 MSI installer (self-contained, builds via `dotnet build`) |
+| `src/CoreAiArchitect.Installer` | WiX v5 MSI installer (self-contained, auto-synced version from `Directory.Build.props`, builds via `dotnet build` or `tools\Build-And-Install.bat`) |
 | `src/CoreAiArchitect.Package` | MSIX packaging (Visual Studio — optional) |
-| `tests/CoreAiArchitect.Tests` | Core unit and UI integration tests (50 passing tests) |
+| `tests/CoreAiArchitect.Tests` | Core unit and UI integration tests (52 passing tests) |
 
 ## Build and run
 

@@ -8,7 +8,6 @@ public interface IDialogService
     void ShowMessage(string message, string title = "Core AI Architect");
     void ShowMessage(string message, string title, bool isError);
     bool Confirm(string message, string title = "Confirm");
-    string? PickProfile(IEnumerable<(string Id, string Label)> profiles);
 }
 
 public sealed class DialogService : IDialogService
@@ -59,13 +58,4 @@ public sealed class DialogService : IDialogService
     public bool Confirm(string message, string title = "Confirm") =>
         System.Windows.MessageBox.Show(message, title, System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question)
         == System.Windows.MessageBoxResult.Yes;
-
-    public string? PickProfile(IEnumerable<(string Id, string Label)> profiles)
-    {
-        var window = new Views.ProfilePickerWindow(profiles.ToList())
-        {
-            Owner = System.Windows.Application.Current?.MainWindow
-        };
-        return window.ShowDialog() == true ? window.SelectedProfileId : null;
-    }
 }
