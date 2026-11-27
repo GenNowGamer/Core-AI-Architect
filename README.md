@@ -1,8 +1,8 @@
 # Core AI Architect
 
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%7C%20Windows%2011%20(x64)-0078D6.svg?logo=windows&logoColor=white)](#build-and-run)
-[![Version](https://img.shields.io/badge/Version-1.1.0-green.svg)](https://github.com/GenNowGamer/Core-AI-Architect/releases/latest)
-[![Release](https://img.shields.io/badge/Release-v1.1.0-orange.svg)](https://github.com/GenNowGamer/Core-AI-Architect/releases/latest)
+[![Version](https://img.shields.io/badge/Version-1.1.1-green.svg)](https://github.com/GenNowGamer/Core-AI-Architect/releases/latest)
+[![Release](https://img.shields.io/badge/Release-v1.1.1-orange.svg)](https://github.com/GenNowGamer/Core-AI-Architect/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/GenNowGamer/Core-AI-Architect/total?color=2ea44f&logo=github&label=Downloads)](https://github.com/GenNowGamer/Core-AI-Architect/releases)
 [![Framework](https://img.shields.io/badge/Framework-.NET%208%20WPF%20%7C%20PowerShell%207%2B-512BD4.svg?logo=dotnet&logoColor=white)](#solution-layout)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](#stack)
@@ -71,7 +71,7 @@ Keep the whole `artifacts\CoreAiArchitect` folder together — the `.exe` needs 
 ### PowerShell module
 
 ```powershell
-$moduleDir = "d:\Robert\Desktop\App Project Builds\Core_AI_Architect\src\CoreAiArchitect.PowerShell\bin\Release\net8.0"
+$moduleDir = ".\src\CoreAiArchitect.PowerShell\bin\Release\net8.0"
 Import-Module "$moduleDir\CoreAiArchitect.psd1"
 Get-SsotFormProfile
 New-SsotDocument -Profile wpf_desktop -OutFile .\my-project.ssot.json
